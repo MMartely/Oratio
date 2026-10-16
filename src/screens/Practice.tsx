@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight, Crown } from 'lucide-react';
-import { features, scenarios } from '../data/features';
+import { featureRoute, features, scenarios } from '../data/features';
 import { useI18n } from '../i18n';
 import { useApp } from '../store/useApp';
 
@@ -39,7 +39,7 @@ export function Practice() {
         {others.map(({ id, icon: Icon, tone }) => (
           <Link
             key={id}
-            to={`/soon/${id}`}
+            to={featureRoute(id)}
             className="flex items-center gap-4 rounded-3xl border border-line bg-surface p-4 shadow-soft transition active:scale-[.99]"
           >
             <span className={`grid size-12 shrink-0 place-items-center rounded-2xl ${tone}`}>

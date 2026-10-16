@@ -18,9 +18,21 @@ export function fmt(template: string, vars: Record<string, string | number> = {}
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? `{${key}}`));
 }
 
+export interface Plural {
+  readonly one: string;
+  readonly other: string;
+}
+
+/** Singulier en français pour 0 et 1, en anglais pour 1 seulement. */
+export function plural(lang: 'fr' | 'en', forms: Plural, n: number) {
+  const one = lang === 'fr' ? Math.abs(n) < 2 : n === 1;
+  return fmt(one ? forms.one : forms.other, { n });
+}
+
 export function useI18n() {
   const lang = useApp((s) => s.settings.lang);
   const d = dicts[lang];
   const f = useCallback(fmt, []);
-  return { d, f, lang };
+  const p = useCallback((forms: Plural, n: number) => plural(lang, forms, n), [lang]);
+  return { d, f, p, lang };
 }

@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { backend } from '../services/backend';
 import { safeStorage } from '../services/safeStorage';
-import type { Lang, Onboarding, Profile, Progress, Theme, UserData } from '../types';
+import { FREE_AI_PER_DAY } from '../data/features';
+import type { AnalysisResult, Lang, Onboarding, Profile, Progress, Theme, UserData } from '../types';
 
 export const todayKey = (date = new Date()) => {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -32,7 +33,23 @@ const emptyProgress = (): Progress => ({
   sessions: 0,
   minutesToday: 0,
   minutesDay: null,
+  aiCount: 0,
+  aiDay: null,
 });
+
+const MAX_SESSIONS = 50;
+
+/** Complète les données enregistrées par une version précédente de l'application. */
+export function normalizeData(data: UserData): UserData {
+  return { ...data, progress: { ...emptyProgress(), ...data.progress }, sessions: data.sessions ?? [] };
+}
+
+/** Analyses IA encore disponibles aujourd'hui (Infinity en Premium). */
+export function aiRemaining(data: UserData) {
+  if (data.plan === 'premium') return Infinity;
+  const used = data.progress.aiDay === todayKey() ? data.progress.aiCount : 0;
+  return Math.max(0, FREE_AI_PER_DAY - used);
+}
 
 /** La série ne compte que si la dernière activité date d'aujourd'hui ou d'hier. */
 export function liveStreak(p: Progress) {
@@ -67,6 +84,8 @@ interface AppState {
   signOut(): Promise<void>;
   /** Enregistre une activité : minutes, XP et mise à jour de la série. */
   recordActivity(minutes: number, xp: number): void;
+  /** Sauvegarde une analyse vocale et met à jour la progression. */
+  addAnalysis(result: AnalysisResult): void;
 }
 
 export const useApp = create<AppState>()(
@@ -96,11 +115,14 @@ export const useApp = create<AppState>()(
         startSession: async (profile) => {
           const stored = await backend.loadUserData(profile.id);
           const draft = get().draft;
-          const data: UserData = stored ?? {
-            onboarding: draft.done ? draft : { ...draft, coachId: draft.coachId ?? 'lea', done: true },
-            progress: emptyProgress(),
-            plan: 'free',
-          };
+          const data: UserData = stored
+            ? normalizeData(stored)
+            : {
+                onboarding: draft.done ? draft : { ...draft, coachId: draft.coachId ?? 'lea', done: true },
+                progress: emptyProgress(),
+                plan: 'free',
+                sessions: [],
+              };
           set({ session: profile, draft: emptyOnboarding() });
           commit(data);
         },
@@ -131,12 +153,31 @@ export const useApp = create<AppState>()(
             },
           });
         },
+
+        addAnalysis: (result) => {
+          get().recordActivity(Math.max(1, Math.round(result.duration / 60)), result.xp);
+          const data = get().data;
+          if (!data) return;
+          const p = data.progress;
+          const today = todayKey();
+          commit({
+            ...data,
+            sessions: [result, ...data.sessions].slice(0, MAX_SESSIONS),
+            progress: result.aiLocked
+              ? p
+              : { ...p, aiCount: (p.aiDay === today ? p.aiCount : 0) + 1, aiDay: today },
+          });
+        },
       };
     },
     {
       name: 'oratio.app',
       storage: createJSONStorage(() => safeStorage),
       partialize: (s) => ({ settings: s.settings, draft: s.draft, session: s.session, data: s.data }),
+      merge: (persisted, current) => {
+        const p = persisted as Partial<AppState>;
+        return { ...current, ...p, data: p.data ? normalizeData(p.data) : null };
+      },
     },
   ),
 );

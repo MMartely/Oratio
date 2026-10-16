@@ -26,6 +26,7 @@ export default {
         peach: token('peach'),
         sky: token('sky'),
         sun: token('sun'),
+        chart: token('chart'),
       },
       fontFamily: {
         sans: ['Nunito', 'system-ui', 'sans-serif'],

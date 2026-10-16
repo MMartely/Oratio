@@ -21,3 +21,9 @@ export const scenarios: { id: ScenarioId; icon: LucideIcon; premium: boolean }[]
 
 /** Jours du parcours accessibles en formule gratuite. */
 export const FREE_PATH_DAYS = 7;
+
+/** Analyses IA par jour en formule gratuite. */
+export const FREE_AI_PER_DAY = 3;
+
+/** Écran de chaque fonctionnalité ; celles pas encore construites mènent à « En construction ». */
+export const featureRoute = (id: FeatureId) => (id === 'analysis' ? '/analysis' : `/soon/${id}`);

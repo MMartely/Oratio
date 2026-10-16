@@ -1,6 +1,7 @@
 import { AuthError, type Profile, type UserData } from '../types';
 import { readJSON, writeJSON } from './safeStorage';
 import type { Backend } from './backend';
+import { newId } from '../utils/id';
 
 const ACCOUNTS_KEY = 'oratio.demo.accounts';
 const dataKey = (id: string) => `oratio.demo.data.${id}`;
@@ -18,14 +19,6 @@ async function hash(text: string): Promise<string> {
     return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, '0')).join('');
   } catch {
     return `plain:${text}`;
-  }
-}
-
-function newId() {
-  try {
-    return crypto.randomUUID();
-  } catch {
-    return `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   }
 }
 

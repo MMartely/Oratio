@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight, Flame, Play, Sparkles } from 'lucide-react';
 import { getCoach } from '../data/coaches';
-import { features } from '../data/features';
+import { featureRoute, features } from '../data/features';
 import { CoachBubble } from '../components/CoachBubble';
 import { Card, Pill, ProgressBar } from '../components/ui';
 import { useI18n } from '../i18n';
@@ -89,7 +89,7 @@ export function Home() {
           {features.map(({ id, icon: Icon, tone }, i) => (
             <Link
               key={id}
-              to={`/soon/${id}`}
+              to={featureRoute(id)}
               className={`animate-rise rounded-3xl border border-line bg-surface p-4 shadow-soft transition active:scale-[.98] ${i === 0 ? 'col-span-2 flex items-center gap-4' : ''}`}
               style={{ animationDelay: `${i * 60}ms` }}
             >

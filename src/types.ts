@@ -33,6 +33,9 @@ export interface Progress {
   sessions: number;
   minutesToday: number;
   minutesDay: string | null;
+  /** Analyses IA utilisées aujourd'hui (limite de la formule gratuite). */
+  aiCount: number;
+  aiDay: string | null;
 }
 
 /** Tout ce qui est synchronisé avec le compte de l'utilisateur. */
@@ -40,6 +43,8 @@ export interface UserData {
   onboarding: Onboarding;
   progress: Progress;
   plan: Plan;
+  /** Analyses les plus récentes en premier. */
+  sessions: AnalysisResult[];
 }
 
 export type AuthErrorCode =
@@ -54,4 +59,37 @@ export class AuthError extends Error {
   constructor(public code: AuthErrorCode) {
     super(code);
   }
+}
+
+export interface CoachFeedback {
+  source: 'demo' | 'claude';
+  /** Note du contenu (structure, clarté, vocabulaire), absente sans transcription. */
+  contentScore: number | null;
+  summary: string;
+  strengths: string[];
+  tips: string[];
+  rewrite: { before: string; after: string } | null;
+}
+
+export interface AnalysisResult {
+  id: string;
+  createdAt: string;
+  source: 'live' | 'upload';
+  lang: Lang;
+  coachId: CoachId;
+  topic: string | null;
+  duration: number;
+  activeDuration: number;
+  transcript: import('./analysis/fillers').Token[] | null;
+  breakdown: { label: string; count: number }[];
+  overused: { word: string; count: number }[];
+  metrics: import('./analysis/metrics').Metrics;
+  scores: import('./analysis/metrics').Scores;
+  feedback: CoachFeedback;
+  /** Quota d'analyses IA du jour atteint (formule gratuite). */
+  aiLocked: boolean;
+  timeline: number[];
+  /** Positions des hésitations, de 0 à 1 sur la durée. */
+  hesitationMarks: number[];
+  xp: number;
 }
