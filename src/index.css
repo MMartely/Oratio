@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Palette « calme et douce » : lavande, sauge, pêche, crème.
+   Les valeurs sont des triplets RGB pour permettre l'opacité Tailwind (bg-primary/20). */
+:root {
+  --bg: 251 248 244;
+  --surface: 255 255 255;
+  --soft: 243 239 250;
+  --ink: 46 42 59;
+  --muted: 112 106 128;
+  --line: 232 226 238;
+  --primary: 116 102 200;
+  --primary-ink: 255 255 255;
+  --sage: 141 181 150;
+  --peach: 244 182 156;
+  --sky: 156 195 228;
+  --sun: 246 205 120;
+  --shadow: 80 60 140;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: 27 25 38;
+    --surface: 37 34 51;
+    --soft: 47 42 66;
+    --ink: 240 236 247;
+    --muted: 168 160 186;
+    --line: 58 53 78;
+    --primary: 167 155 236;
+    --primary-ink: 27 25 38;
+    --sage: 132 178 144;
+    --peach: 232 160 132;
+    --sky: 128 170 210;
+    --sun: 230 190 100;
+    --shadow: 0 0 0;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: 27 25 38;
+  --surface: 37 34 51;
+  --soft: 47 42 66;
+  --ink: 240 236 247;
+  --muted: 168 160 186;
+  --line: 58 53 78;
+  --primary: 167 155 236;
+  --primary-ink: 27 25 38;
+  --sage: 132 178 144;
+  --peach: 232 160 132;
+  --sky: 128 170 210;
+  --sun: 230 190 100;
+  --shadow: 0 0 0;
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: rgb(var(--bg));
+  color: rgb(var(--ink));
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  @apply font-sans antialiased;
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3 {
+  @apply font-display tracking-tight;
+}
+
+:focus-visible {
+  outline: 3px solid rgb(var(--primary) / 0.6);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

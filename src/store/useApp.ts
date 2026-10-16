@@ -1,0 +1,142 @@
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { backend } from '../services/backend';
+import { safeStorage } from '../services/safeStorage';
+import type { Lang, Onboarding, Profile, Progress, Theme, UserData } from '../types';
+
+export const todayKey = (date = new Date()) => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+const yesterdayKey = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return todayKey(d);
+};
+
+export const emptyOnboarding = (): Onboarding => ({
+  goals: [],
+  anxiety: null,
+  dailyMinutes: '10',
+  coachId: null,
+  done: false,
+});
+
+const emptyProgress = (): Progress => ({
+  xp: 0,
+  streak: 0,
+  bestStreak: 0,
+  lastActiveDay: null,
+  currentDay: 1,
+  sessions: 0,
+  minutesToday: 0,
+  minutesDay: null,
+});
+
+/** La série ne compte que si la dernière activité date d'aujourd'hui ou d'hier. */
+export function liveStreak(p: Progress) {
+  return p.lastActiveDay === todayKey() || p.lastActiveDay === yesterdayKey() ? p.streak : 0;
+}
+
+export function minutesToday(p: Progress) {
+  return p.minutesDay === todayKey() ? p.minutesToday : 0;
+}
+
+const detectLang = (): Lang => {
+  try {
+    return navigator.language.toLowerCase().startsWith('fr') ? 'fr' : 'en';
+  } catch {
+    return 'fr';
+  }
+};
+
+interface AppState {
+  settings: { lang: Lang; theme: Theme };
+  /** Réponses de l'onboarding, avant que le compte existe. */
+  draft: Onboarding;
+  session: Profile | null;
+  data: UserData | null;
+
+  setLang(lang: Lang): void;
+  setTheme(theme: Theme): void;
+  updateDraft(patch: Partial<Onboarding>): void;
+  updateOnboarding(patch: Partial<Onboarding>): void;
+  /** Ouvre la session et charge (ou crée) les données du compte. */
+  startSession(profile: Profile): Promise<void>;
+  signOut(): Promise<void>;
+  /** Enregistre une activité : minutes, XP et mise à jour de la série. */
+  recordActivity(minutes: number, xp: number): void;
+}
+
+export const useApp = create<AppState>()(
+  persist(
+    (set, get) => {
+      const commit = (data: UserData) => {
+        set({ data });
+        const session = get().session;
+        if (session) void backend.saveUserData(session.id, data);
+      };
+
+      return {
+        settings: { lang: detectLang(), theme: 'system' },
+        draft: emptyOnboarding(),
+        session: null,
+        data: null,
+
+        setLang: (lang) => set((s) => ({ settings: { ...s.settings, lang } })),
+        setTheme: (theme) => set((s) => ({ settings: { ...s.settings, theme } })),
+        updateDraft: (patch) => set((s) => ({ draft: { ...s.draft, ...patch } })),
+
+        updateOnboarding: (patch) => {
+          const data = get().data;
+          if (data) commit({ ...data, onboarding: { ...data.onboarding, ...patch } });
+        },
+
+        startSession: async (profile) => {
+          const stored = await backend.loadUserData(profile.id);
+          const draft = get().draft;
+          const data: UserData = stored ?? {
+            onboarding: draft.done ? draft : { ...draft, coachId: draft.coachId ?? 'lea', done: true },
+            progress: emptyProgress(),
+            plan: 'free',
+          };
+          set({ session: profile, draft: emptyOnboarding() });
+          commit(data);
+        },
+
+        signOut: async () => {
+          await backend.signOut();
+          set({ session: null, data: null });
+        },
+
+        recordActivity: (minutes, xp) => {
+          const data = get().data;
+          if (!data) return;
+          const p = data.progress;
+          const today = todayKey();
+          let streak = p.streak;
+          if (p.lastActiveDay !== today) streak = p.lastActiveDay === yesterdayKey() ? p.streak + 1 : 1;
+          commit({
+            ...data,
+            progress: {
+              ...p,
+              xp: p.xp + xp,
+              streak,
+              bestStreak: Math.max(p.bestStreak, streak),
+              lastActiveDay: today,
+              sessions: p.sessions + 1,
+              minutesToday: minutesToday(p) + minutes,
+              minutesDay: today,
+            },
+          });
+        },
+      };
+    },
+    {
+      name: 'oratio.app',
+      storage: createJSONStorage(() => safeStorage),
+      partialize: (s) => ({ settings: s.settings, draft: s.draft, session: s.session, data: s.data }),
+    },
+  ),
+);
