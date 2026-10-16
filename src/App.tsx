@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, MemoryRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { AuthScreen } from './screens/auth/AuthScreen';
 import { Home } from './screens/Home';
@@ -36,10 +36,13 @@ function useDocumentSettings() {
   }, [lang, theme]);
 }
 
+// L'aperçu partageable tourne dans un cadre où l'URL ne doit pas changer : routeur en mémoire.
+const Router = import.meta.env.MODE === 'preview' ? MemoryRouter : HashRouter;
+
 export default function App() {
   useDocumentSettings();
   return (
-    <HashRouter>
+    <Router>
       <Routes>
         <Route path="/welcome" element={<GuestOnly><Welcome /></GuestOnly>} />
         <Route path="/onboarding" element={<GuestOnly><Onboarding /></GuestOnly>} />
@@ -56,6 +59,6 @@ export default function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </HashRouter>
+    </Router>
   );
 }
