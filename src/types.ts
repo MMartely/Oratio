@@ -20,6 +20,8 @@ export interface Onboarding {
   dailyMinutes: DailyMinutes;
   coachId: CoachId | null;
   done: boolean;
+  /** Rappel quotidien : heure locale « HH:MM », ou null s'il est désactivé. */
+  reminder?: string | null;
 }
 
 export interface Progress {
@@ -36,6 +38,10 @@ export interface Progress {
   /** Analyses IA utilisées aujourd'hui (limite de la formule gratuite). */
   aiCount: number;
   aiDay: string | null;
+  /** Leçons du parcours terminées : meilleur nombre d'étoiles et jour de la dernière réussite. */
+  lessons: Record<number, { stars: number; at: string }>;
+  /** Jour de la première leçon : une nouvelle leçon se débloque chaque jour à partir de là. */
+  pathStart: string | null;
 }
 
 /** Tout ce qui est synchronisé avec le compte de l'utilisateur. */

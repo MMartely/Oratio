@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { backend } from '../services/backend';
 import { safeStorage } from '../services/safeStorage';
 import { FREE_AI_PER_DAY } from '../data/features';
+import { nextLessonDay } from '../data/lessons/progress';
 import type { AnalysisResult, Lang, Onboarding, Plan, Profile, Progress, Theme, UserData } from '../types';
 
 export const todayKey = (date = new Date()) => {
@@ -35,6 +36,8 @@ const emptyProgress = (): Progress => ({
   minutesDay: null,
   aiCount: 0,
   aiDay: null,
+  lessons: {},
+  pathStart: null,
 });
 
 const MAX_SESSIONS = 50;
@@ -92,6 +95,8 @@ interface AppState {
   addAnalysis(result: AnalysisResult): void;
   /** Mode démo uniquement : essayer Premium sans paiement. */
   setDemoPlan(plan: Plan): void;
+  /** Termine une leçon du parcours : étoiles, XP, série, et leçon suivante. */
+  completeLesson(day: number, stars: number, minutes: number): number;
 }
 
 export const useApp = create<AppState>()(
@@ -169,6 +174,20 @@ export const useApp = create<AppState>()(
               minutesDay: today,
             },
           });
+        },
+
+        completeLesson: (day, stars, minutes) => {
+          const before = get().data?.progress.lessons[day];
+          // XP pleine la première fois, puis seulement les étoiles gagnées en plus.
+          const xp = before ? 5 + 5 * Math.max(0, stars - before.stars) : 10 + 5 * stars;
+          get().recordActivity(minutes, xp);
+          const data = get().data;
+          if (!data) return xp;
+          const today = todayKey();
+          const lessons = { ...data.progress.lessons, [day]: { stars: Math.max(stars, before?.stars ?? 0), at: today } };
+          const progress = { ...data.progress, lessons, pathStart: data.progress.pathStart ?? today };
+          commit({ ...data, progress: { ...progress, currentDay: Math.min(30, nextLessonDay(progress)) } });
+          return xp;
         },
 
         setDemoPlan: (plan) => {

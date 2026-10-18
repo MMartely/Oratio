@@ -4,6 +4,7 @@ import { Crown, Info, LogOut } from 'lucide-react';
 import { coaches, getCoach } from '../data/coaches';
 import { CoachAvatar } from '../components/CoachAvatar';
 import { LangSwitch } from '../components/LangSwitch';
+import { ReminderCard } from '../components/ReminderCard';
 import { Button, Card } from '../components/ui';
 import { useI18n } from '../i18n';
 import { backend } from '../services/backend';
@@ -141,6 +142,8 @@ export function Profile() {
           />
         </div>
       </Card>
+
+      <ReminderCard />
 
       <Button
         full

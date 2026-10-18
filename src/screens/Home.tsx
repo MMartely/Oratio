@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, Flame, Play, Sparkles } from 'lucide-react';
+import { Check, ChevronRight, Crown, Flame, Play, Sparkles } from 'lucide-react';
 import { getCoach } from '../data/coaches';
 import { featureRoute, features } from '../data/features';
 import { CoachBubble } from '../components/CoachBubble';
 import { Card, Pill, ProgressBar } from '../components/ui';
 import { useI18n } from '../i18n';
-import { liveStreak, minutesToday, useApp } from '../store/useApp';
+import { liveStreak, minutesToday, todayKey, useApp } from '../store/useApp';
+import { lessonState, nextLessonDay } from '../data/lessons/progress';
 import { lessonTitle } from '../data/path';
 
 function GoalRing({ value }: { value: number }) {
@@ -37,7 +38,7 @@ export function Home() {
   const coach = getCoach(data.onboarding.coachId);
   const hour = new Date().getHours();
   const moment = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
-  const day = data.progress.currentDay;
+  const day = nextLessonDay(data.progress);
   const goal = Number(data.onboarding.dailyMinutes);
   const done = minutesToday(data.progress);
 
@@ -59,20 +60,31 @@ export function Home() {
         <CoachBubble coach={coach} message={f(d.coaches[coach.id].greetings[moment], { name: session.name })} />
       </div>
 
-      <Link to="/path" className="block animate-rise">
-        <div className="relative overflow-hidden rounded-3xl bg-primary p-5 text-primary-ink shadow-soft">
-          <div className="absolute -right-10 -top-10 size-40 rounded-full bg-white/10" />
-          <div className="absolute -bottom-16 right-10 size-32 rounded-full bg-white/10" />
-          <p className="text-sm font-bold opacity-80">{d.home.todayLesson} · {f(d.home.dayOf, { n: day })}</p>
-          <p className="mt-1 max-w-[80%] font-display text-2xl font-semibold">{lessonTitle(d, day)}</p>
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-sm font-semibold opacity-80">{f(d.common.minutes, { n: 5 })}</span>
-            <span className="grid size-12 place-items-center rounded-full bg-primary-ink text-primary">
-              <Play size={20} fill="currentColor" />
-            </span>
-          </div>
-        </div>
-      </Link>
+      {(() => {
+        const state = day <= 30 ? lessonState(day, data, todayKey()) : null;
+        const target = state === 'available' ? `/lesson/${day}` : state === 'premium' ? '/premium' : '/path';
+        const status =
+          day > 30 ? d.lesson.allDone : state === 'tomorrow' ? d.lesson.doneToday : state === 'premium' ? d.scenario.premiumBody : null;
+        return (
+          <Link to={target} className="block animate-rise">
+            <div className="relative overflow-hidden rounded-3xl bg-primary p-5 text-primary-ink shadow-soft">
+              <div className="absolute -right-10 -top-10 size-40 rounded-full bg-white/10" />
+              <div className="absolute -bottom-16 right-10 size-32 rounded-full bg-white/10" />
+              <p className="text-sm font-bold opacity-80">
+                {d.home.todayLesson}
+                {day <= 30 && ` · ${f(d.home.dayOf, { n: day })}`}
+              </p>
+              <p className="mt-1 max-w-[80%] font-display text-2xl font-semibold">{day <= 30 ? lessonTitle(d, day) : d.lesson.allDone}</p>
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold opacity-80">{status ?? f(d.common.minutes, { n: 7 })}</span>
+                <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary-ink text-primary">
+                  {state === 'available' ? <Play size={20} fill="currentColor" /> : state === 'premium' ? <Crown size={20} /> : <Check size={22} strokeWidth={3} />}
+                </span>
+              </div>
+            </div>
+          </Link>
+        );
+      })()}
 
       <Card className="flex animate-rise items-center gap-4">
         <GoalRing value={done / goal} />

@@ -14,7 +14,9 @@ export default defineConfig(({ mode }) => ({
       ? viteSingleFile()
       : VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['icon.svg'],
+          includeAssets: ['icon.svg', 'push-handler.js'],
+          // Les rappels quotidiens sont affichés par ce script, ajouté au service worker.
+          workbox: { importScripts: ['push-handler.js'] },
           manifest: {
             name: 'Oratio — Prise de parole en public',
             short_name: 'Oratio',

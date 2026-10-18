@@ -86,6 +86,16 @@ Ensuite, chaque modification envoyée sur la branche `main` est mise en ligne au
 - **Android (Chrome)** : ouvrez l'adresse, menu ⋮ → *Ajouter à l'écran d'accueil*.
 - **iPhone (Safari)** : ouvrez l'adresse, bouton Partager → *Sur l'écran d'accueil*.
 
+## Rappels quotidiens
+
+Rien à configurer : les clés des notifications sont créées automatiquement par le serveur au premier usage,
+et le processus **Rappels quotidiens** (onglet Actions) se déclenche toutes les 30 minutes.
+Chaque utilisateur active son rappel dans **Profil → Rappel quotidien** et choisit l'heure.
+
+- Un rappel au plus par jour, et seulement si la leçon du jour n'est pas faite.
+- GitHub peut retarder les tâches planifiées de quelques minutes : le rappel arrive « autour » de l'heure choisie.
+- Sur iPhone, les notifications demandent iOS 16.4 ou plus récent et l'application installée sur l'écran d'accueil.
+
 ## Gérer l'application au quotidien
 
 - **Passer un compte en Premium** (en attendant le paiement en ligne) : Supabase → **Table Editor → profiles** → colonne `plan` = `premium`.

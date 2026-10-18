@@ -1,0 +1,23 @@
+# Déclenche les rappels quotidiens toutes les 30 minutes.
+# La fonction n'envoie qu'un rappel par jour et par appareil, et seulement si la leçon du jour n'est pas faite.
+name: Rappels quotidiens
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+    steps:
+      - name: Envoyer les rappels dus
+        if: env.SUPABASE_URL != '' && env.ANON_KEY != ''
+        run: |
+          curl --fail-with-body -sS -X POST "$SUPABASE_URL/functions/v1/reminders" \
+            -H "Authorization: Bearer $ANON_KEY" -H "Content-Type: application/json" -d '{}'

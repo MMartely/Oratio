@@ -46,9 +46,11 @@ jobs:
         run: |
           if [ -n "$ANTHROPIC_API_KEY" ]; then supabase secrets set ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" --project-ref "$PROJECT_REF"; fi
           if [ -n "$COACH_MODEL" ]; then supabase secrets set COACH_MODEL="$COACH_MODEL" --project-ref "$PROJECT_REF"; fi
-      - name: Déployer la fonction coach
+      - name: Déployer les fonctions (coach et rappels)
         if: env.SUPABASE_ACCESS_TOKEN != '' && env.PROJECT_REF != ''
-        run: supabase functions deploy coach --project-ref "$PROJECT_REF"
+        run: |
+          supabase functions deploy coach --project-ref "$PROJECT_REF"
+          supabase functions deploy reminders --project-ref "$PROJECT_REF"
 
   build:
     name: Tests et construction du site
