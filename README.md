@@ -26,7 +26,17 @@ npm test               # tests automatiques (analyse vocale, tics, notes, coach)
 | `src/data/` | Coachs, fonctionnalités, parcours de 30 jours, badges |
 | `src/audio/` | Micro, enregistrement, transcription (reconnaissance vocale du navigateur), analyse du son |
 | `src/analysis/` | Mots parasites, débit, pauses, notes sur 100, assemblage du bilan |
-| `src/services/coach/` | Le coach qui commente le discours : règles locales en mode démo, Claude ensuite |
+| `src/services/coach/` | Le coach qui commente le discours : règles locales en mode démo, Claude une fois Supabase branché |
+| `supabase/migrations/` | Tables, règles de sécurité (chacun ne voit que ses données), quota d'analyses IA, stockage audio Premium |
+| `supabase/functions/coach/` | Fonction serveur qui appelle Claude (la clé ne quitte jamais le serveur) et vérifie le quota |
+| `.github/workflows/deploy.yml` | Mise en ligne automatique : Supabase puis GitHub Pages |
+
+## Mode démo et mode en ligne
+
+Sans configuration, l'application tourne en **mode démo** : comptes et données sur l'appareil, coach simulé.
+Dès que `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` sont fournis (voir `.env.example`), elle utilise
+les vrais comptes (e-mail avec confirmation, Google), synchronise la progression et fait appel au coach Claude.
+Le guide pas à pas est dans [`docs/MISE-EN-LIGNE.md`](docs/MISE-EN-LIGNE.md).
 
 ## Analyse vocale : comment ça marche
 
@@ -50,5 +60,5 @@ Limites connues, à vérifier sur de vrais téléphones : Firefox ne propose pas
 - [ ] Situations : entretien, exposé, pitch, discours d'événement
 - [ ] Improvisation et respiration anti-trac
 - [ ] Téléprompteur + vidéo
-- [ ] Branchement Supabase (comptes e-mail + Google) et API Claude
-- [ ] Paiement Premium et mise en ligne
+- [x] Étape 3 — Branchement : comptes Supabase (e-mail confirmé + Google), progression synchronisée, coach Claude Opus 5.5 côté serveur avec quota de 3 analyses par jour, audio conservé en Premium, mise en ligne automatique sur GitHub Pages
+- [ ] Paiement Premium

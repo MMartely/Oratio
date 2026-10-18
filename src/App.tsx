@@ -15,16 +15,28 @@ import { Soon } from './screens/Soon';
 import { Welcome } from './screens/Welcome';
 import { useApp } from './store/useApp';
 
+function Loading() {
+  return (
+    <div className="grid min-h-dvh place-items-center" role="status" aria-label="Oratio">
+      <div className="size-20 animate-breathe rounded-full bg-primary/20" />
+    </div>
+  );
+}
+
 function RequireAuth({ children }: { children: ReactNode }) {
+  const ready = useApp((s) => s.ready);
   const session = useApp((s) => s.session);
   const data = useApp((s) => s.data);
   const onboarded = useApp((s) => s.draft.done);
+  if (!ready) return <Loading />;
   if (!session || !data) return <Navigate to={onboarded ? '/signup' : '/welcome'} replace />;
   return children;
 }
 
 function GuestOnly({ children }: { children: ReactNode }) {
+  const ready = useApp((s) => s.ready);
   const session = useApp((s) => s.session);
+  if (!ready) return <Loading />;
   return session ? <Navigate to="/" replace /> : children;
 }
 
@@ -43,6 +55,10 @@ const Router = import.meta.env.MODE === 'preview' ? MemoryRouter : HashRouter;
 
 export default function App() {
   useDocumentSettings();
+  const restore = useApp((s) => s.restore);
+  useEffect(() => {
+    void restore();
+  }, [restore]);
   return (
     <Router>
       <Routes>

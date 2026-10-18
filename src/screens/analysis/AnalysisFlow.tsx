@@ -14,7 +14,9 @@ import { BackButton, Button, ProgressBar, Screen } from '../../components/ui';
 import { getCoach } from '../../data/coaches';
 import { FREE_AI_PER_DAY } from '../../data/features';
 import { useI18n } from '../../i18n';
+import { backend } from '../../services/backend';
 import { aiRemaining, useApp } from '../../store/useApp';
+import type { AnalysisResult } from '../../types';
 
 type Phase = 'setup' | 'countdown' | 'recording' | 'processing';
 type Problem = { kind: 'mic'; code: CaptureError } | { kind: 'short' } | { kind: 'file' } | { kind: 'long' };
@@ -218,7 +220,7 @@ export function AnalysisFlow() {
       }),
       new Promise((r) => setTimeout(r, 1400)),
     ]);
-    if (blob) keepRecording(result.id, blob);
+    if (blob) saveAudio(result, blob);
     addAnalysis(result);
     navigate(`/analysis/result/${result.id}`, { replace: true });
   };
@@ -253,13 +255,21 @@ export function AnalysisFlow() {
         name: session.name,
         aiLocked: remaining <= 0,
       });
-      keepRecording(result.id, file);
+      saveAudio(result, file);
       addAnalysis(result);
       navigate(`/analysis/result/${result.id}`, { replace: true });
     } catch (err) {
       setProblem({ kind: err instanceof FileTooLong ? 'long' : 'file' });
       setPhase('setup');
     }
+  };
+
+  /** Garde l'audio pour la visite, et sur le serveur pour les abonnés Premium. */
+  const saveAudio = (result: AnalysisResult, blob: Blob) => {
+    keepRecording(result.id, blob);
+    if (data.plan !== 'premium') return;
+    result.recorded = true;
+    void backend.saveRecording(session.id, result.id, blob).catch(() => undefined);
   };
 
   const shuffleTopic = () => {

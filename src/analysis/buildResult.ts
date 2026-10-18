@@ -35,7 +35,7 @@ export async function buildResult(input: Input): Promise<AnalysisResult> {
   const metrics = computeMetrics(acoustic, fillers, lang);
   const base = computeScores(metrics, acoustic.activeDuration, null);
   const transcript = fillers && fillers.words > 0 ? fillers.tokens : null;
-  const feedback = await coachAI.feedback({
+  const { feedback, aiLocked } = await coachAI.feedback({
     lang,
     coachId: input.coachId,
     name: input.name,
@@ -77,7 +77,7 @@ export async function buildResult(input: Input): Promise<AnalysisResult> {
     metrics,
     scores,
     feedback,
-    aiLocked: input.aiLocked,
+    aiLocked,
     timeline: downsample(acoustic.timeline, TIMELINE_BARS),
     hesitationMarks: acoustic.hesitationTimes.map((t) => Math.round((t / Math.max(acoustic.duration, 1)) * 1000) / 1000),
     xp: 10 + Math.round(scores.global / 10) + 2 * minutes,

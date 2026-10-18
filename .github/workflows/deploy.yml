@@ -1,0 +1,82 @@
+# Met en ligne Oratio à chaque envoi sur la branche main :
+# 1. base de données et fonction « coach » sur Supabase (si les secrets sont renseignés) ;
+# 2. tests, puis publication du site sur GitHub Pages.
+name: Mise en ligne
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  supabase:
+    name: Supabase (base de données et coach)
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.SUPABASE_ACCESS_TOKEN != '' && env.PROJECT_REF != ''
+      - uses: supabase/setup-cli@v1
+        if: env.SUPABASE_ACCESS_TOKEN != '' && env.PROJECT_REF != ''
+        with:
+          version: latest
+      - name: Lier le projet
+        if: env.SUPABASE_ACCESS_TOKEN != '' && env.PROJECT_REF != ''
+        run: supabase link --project-ref "$PROJECT_REF"
+      - name: Appliquer les migrations
+        if: env.SUPABASE_ACCESS_TOKEN != '' && env.PROJECT_REF != ''
+        run: supabase db push
+      - name: Transmettre la clé de l'API Claude à la fonction
+        if: env.SUPABASE_ACCESS_TOKEN != '' && env.PROJECT_REF != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          COACH_MODEL: ${{ vars.COACH_MODEL }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then supabase secrets set ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" --project-ref "$PROJECT_REF"; fi
+          if [ -n "$COACH_MODEL" ]; then supabase secrets set COACH_MODEL="$COACH_MODEL" --project-ref "$PROJECT_REF"; fi
+      - name: Déployer la fonction coach
+        if: env.SUPABASE_ACCESS_TOKEN != '' && env.PROJECT_REF != ''
+        run: supabase functions deploy coach --project-ref "$PROJECT_REF"
+
+  build:
+    name: Tests et construction du site
+    needs: supabase
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Publication sur GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

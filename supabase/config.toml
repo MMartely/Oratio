@@ -1,0 +1,12 @@
+# Configuration Supabase du projet Oratio (utilisée par la CLI et le déploiement automatique).
+project_id = "oratio"
+
+[auth]
+# Adresse publique de l'application : remplacée par la vraie adresse GitHub Pages lors du déploiement.
+site_url = "http://localhost:5173"
+
+[auth.email]
+enable_confirmations = true
+
+[functions.coach]
+verify_jwt = true

@@ -53,6 +53,9 @@ export type AuthErrorCode =
   | 'missing_name'
   | 'email_taken'
   | 'invalid_credentials'
+  | 'email_not_confirmed'
+  | 'confirm_email'
+  | 'rate_limited'
   | 'unknown';
 
 export class AuthError extends Error {
@@ -92,4 +95,6 @@ export interface AnalysisResult {
   /** Positions des hésitations, de 0 à 1 sur la durée. */
   hesitationMarks: number[];
   xp: number;
+  /** Audio conservé sur le serveur (formule Premium). */
+  recorded?: boolean;
 }

@@ -76,11 +76,22 @@ export const demoBackend: Backend = {
 
   async signOut() {},
 
+  async currentProfile() {
+    return null;
+  },
+
   async loadUserData(userId) {
     return readJSON<UserData | null>(dataKey(userId), null);
   },
 
   async saveUserData(userId, data) {
     writeJSON(dataKey(userId), data);
+  },
+
+  // En démo, l'audio reste en mémoire le temps de la visite.
+  async saveRecording() {},
+
+  async recordingUrl() {
+    return null;
   },
 };

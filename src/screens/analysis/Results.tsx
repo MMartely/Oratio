@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Check, Crown, Info, Lock, RotateCcw, Sparkles, Target } from 'lucide-react';
 import {
@@ -13,6 +14,7 @@ import { recordingUrl } from '../../audio/recordings';
 import { CoachBubble } from '../../components/CoachBubble';
 import { BackButton, Button, Card, Pill, Screen } from '../../components/ui';
 import { getCoach } from '../../data/coaches';
+import { backend } from '../../services/backend';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../store/useApp';
 import type { AnalysisResult } from '../../types';
@@ -107,6 +109,40 @@ function Timeline({ result }: { result: AnalysisResult }) {
   );
 }
 
+/** Réécoute : en mémoire pendant la visite, ou depuis le serveur pour les abonnés Premium. */
+function Replay({ result }: { result: AnalysisResult }) {
+  const { d } = useI18n();
+  const session = useApp((s) => s.session);
+  const plan = useApp((s) => s.data?.plan);
+  const [url, setUrl] = useState(() => recordingUrl(result.id));
+  useEffect(() => {
+    if (url || !result.recorded || !session) return;
+    let alive = true;
+    backend.recordingUrl(session.id, result.id).then((u) => alive && setUrl(u));
+    return () => {
+      alive = false;
+    };
+  }, [url, result.recorded, result.id, session]);
+
+  if (url) {
+    return (
+      <Card>
+        <h3 className="mb-3 font-sans font-bold">{d.results.replay}</h3>
+        <audio controls src={url} className="w-full" />
+      </Card>
+    );
+  }
+  if (plan === 'free' && result.source === 'live') {
+    return (
+      <Link to="/premium" className="flex items-start gap-3 rounded-3xl bg-primary/10 p-4 text-sm font-semibold">
+        <Crown size={20} className="shrink-0 text-primary" />
+        {d.results.replayPremium}
+      </Link>
+    );
+  }
+  return null;
+}
+
 export function Results() {
   const { id } = useParams();
   const { d, f, p, lang } = useI18n();
@@ -127,7 +163,6 @@ export function Results() {
   const coach = getCoach(result.coachId);
   const { metrics: m, scores } = result;
   const level = scores.global >= 85 ? 'great' : scores.global >= 70 ? 'good' : scores.global >= 55 ? 'ok' : 'work';
-  const audio = recordingUrl(result.id);
   const date = new Date(result.createdAt).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-GB', {
     day: 'numeric',
     month: 'long',
@@ -325,16 +360,12 @@ export function Results() {
         )}
       </Card>
 
-      {audio && (
-        <Card>
-          <h3 className="mb-3 font-sans font-bold">{d.results.replay}</h3>
-          <audio controls src={audio} className="w-full" />
-        </Card>
-      )}
+      <Replay result={result} />
 
       {result.feedback.source === 'demo' && (
         <p className="flex items-start justify-center gap-2 text-center text-xs text-muted">
-          <Info size={14} className="mt-0.5 shrink-0" /> {d.results.demoCoach}
+          <Info size={14} className="mt-0.5 shrink-0" />
+          {backend.mode === 'demo' ? d.results.demoCoach : result.transcript && !result.aiLocked ? d.results.coachOffline : d.results.localCoach}
         </p>
       )}
 

@@ -7,7 +7,7 @@ import { BackButton, Button, Screen } from '../../components/ui';
 import { useI18n } from '../../i18n';
 import { backend } from '../../services/backend';
 import { useApp } from '../../store/useApp';
-import { AuthError, type AuthErrorCode } from '../../types';
+import { AuthError, type AuthErrorCode, type Profile } from '../../types';
 
 function GoogleLogo() {
   return (
@@ -49,15 +49,17 @@ export function AuthScreen({ mode }: { mode: 'signup' | 'signin' }) {
   const [error, setError] = useState<AuthErrorCode | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const run = async (action: () => Promise<Parameters<typeof startSession>[0]>) => {
+  const run = async (action: () => Promise<Profile | null>) => {
     setBusy(true);
     setError(null);
     try {
-      await startSession(await action());
+      const profile = await action();
+      // null : la page part chez Google, on garde le bouton désactivé.
+      if (!profile) return;
+      await startSession(profile);
       navigate('/', { replace: true });
     } catch (e) {
       setError(e instanceof AuthError ? e.code : 'unknown');
-    } finally {
       setBusy(false);
     }
   };
@@ -115,7 +117,10 @@ export function AuthScreen({ mode }: { mode: 'signup' | 'signin' }) {
             hint={isSignUp ? d.auth.passwordHint : undefined}
           />
           {error && (
-            <p role="alert" className="rounded-2xl bg-peach/20 px-4 py-3 text-sm font-semibold">
+            <p
+              role={error === 'confirm_email' ? 'status' : 'alert'}
+              className={`rounded-2xl px-4 py-3 text-sm font-semibold ${error === 'confirm_email' ? 'bg-sage/25' : 'bg-peach/20'}`}
+            >
               {d.auth.errors[error]}
             </p>
           )}

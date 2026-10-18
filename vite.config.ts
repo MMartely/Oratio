@@ -6,6 +6,8 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 // `--mode preview` produit un seul fichier HTML autonome (aperçu partageable),
 // le mode normal produit la PWA installable.
 export default defineConfig(({ mode }) => ({
+  // Chemins relatifs : l'application fonctionne à la racine d'un domaine comme dans un sous-dossier (GitHub Pages).
+  base: './',
   plugins: [
     react(),
     mode === 'preview'
@@ -22,6 +24,7 @@ export default defineConfig(({ mode }) => ({
             display: 'standalone',
             orientation: 'portrait',
             start_url: '.',
+            scope: '.',
             icons: [
               { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
             ],

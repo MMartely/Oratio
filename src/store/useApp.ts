@@ -81,6 +81,10 @@ interface AppState {
   updateOnboarding(patch: Partial<Onboarding>): void;
   /** Ouvre la session et charge (ou crée) les données du compte. */
   startSession(profile: Profile): Promise<void>;
+  /** Au chargement : reprend la session ouverte côté serveur (retour de Google, lien e-mail). */
+  restore(): Promise<void>;
+  /** Faux tant que la session n'a pas été vérifiée auprès du serveur. */
+  ready: boolean;
   signOut(): Promise<void>;
   /** Enregistre une activité : minutes, XP et mise à jour de la série. */
   recordActivity(minutes: number, xp: number): void;
@@ -102,6 +106,7 @@ export const useApp = create<AppState>()(
         draft: emptyOnboarding(),
         session: null,
         data: null,
+        ready: backend.mode === 'demo',
 
         setLang: (lang) => set((s) => ({ settings: { ...s.settings, lang } })),
         setTheme: (theme) => set((s) => ({ settings: { ...s.settings, theme } })),
@@ -115,16 +120,26 @@ export const useApp = create<AppState>()(
         startSession: async (profile) => {
           const stored = await backend.loadUserData(profile.id);
           const draft = get().draft;
-          const data: UserData = stored
-            ? normalizeData(stored)
-            : {
-                onboarding: draft.done ? draft : { ...draft, coachId: draft.coachId ?? 'lea', done: true },
-                progress: emptyProgress(),
-                plan: 'free',
-                sessions: [],
-              };
+          // Un compte neuf reprend les réponses de l'onboarding faites avant l'inscription.
+          const data = normalizeData({
+            onboarding: stored?.onboarding ?? (draft.done ? draft : { ...draft, coachId: draft.coachId ?? 'lea', done: true }),
+            progress: stored?.progress ?? emptyProgress(),
+            plan: stored?.plan ?? 'free',
+            sessions: stored?.sessions ?? [],
+          });
           set({ session: profile, draft: emptyOnboarding() });
           commit(data);
+        },
+
+        restore: async () => {
+          if (backend.mode === 'demo') return set({ ready: true });
+          try {
+            const profile = await backend.currentProfile();
+            if (!profile) set({ session: null, data: null });
+            else await get().startSession(profile);
+          } finally {
+            set({ ready: true });
+          }
         },
 
         signOut: async () => {
