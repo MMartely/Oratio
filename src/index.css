@@ -92,3 +92,14 @@ h3 {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Applaudissements du public virtuel. */
+@keyframes clap {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(0.4);
+  }
+}

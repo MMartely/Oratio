@@ -91,6 +91,8 @@ export class VoiceAnalyzer {
   private rising = false;
   private syllables = 0;
   private buckets: number[] = [];
+  /** Dernières secondes de trames, pour les réactions du public en direct. */
+  private recent: { t: number; db: number; speech: boolean; st: number | null }[] = [];
 
   constructor(private onHesitation?: (t: number) => void) {}
 
@@ -140,6 +142,8 @@ export class VoiceAnalyzer {
       this.silenceRun += dt;
     }
 
+    this.recent.push({ t: this.t, db, speech, st: voiced ? toSemitones(pitch) : null });
+    while (this.recent.length && this.recent[0].t < this.t - 12) this.recent.shift();
     this.trackHesitation(voiced ? toSemitones(pitch) : null, db, tilt, dt);
     this.trackSyllables(db, dt, speech);
     return { t: this.t, db, level, speech, voiced, pitch };
@@ -198,6 +202,23 @@ export class VoiceAnalyzer {
     if (!this.rising) this.valley = Math.min(this.valley, this.envelope);
   }
 
+  /** Volume, variété de l'intonation et silence sur les dernières secondes. */
+  recentStats(seconds = 8) {
+    const frames = this.recent.filter((f) => f.t >= this.t - seconds);
+    const speaking = frames.filter((f) => f.speech);
+    const sts = frames.map((f) => f.st).filter((v): v is number => v !== null);
+    let silence = 0;
+    for (let i = this.recent.length - 1; i >= 0 && !this.recent[i].speech; i--) silence = this.t - this.recent[i].t;
+    return {
+      speakingRatio: frames.length ? speaking.length / frames.length : 0,
+      volumeDb: speaking.length ? mean(speaking.map((f) => f.db)) : null,
+      pitchVarSt: sts.length >= 15 ? robustStd(sts) : null,
+      silence,
+      hesitationsSince: (t: number) => this.hesitationTimes.filter((h) => h >= t).length,
+      now: this.t,
+    };
+  }
+
   /** Pauses d'au moins 0,5 s depuis le début (affichage en direct). */
   get pauseCount() {
     return this.pauseList.filter((p) => p >= PAUSE_MIN).length;
@@ -225,4 +246,40 @@ export class VoiceAnalyzer {
       timeline,
     };
   }
+}
+
+/** Réunit les mesures de plusieurs segments (les réponses d'un entretien) en une seule. */
+export function mergeSummaries(parts: AcousticSummary[]): AcousticSummary {
+  const sum = (f: (p: AcousticSummary) => number) => parts.reduce((s, p) => s + f(p), 0);
+  const weighted = (f: (p: AcousticSummary) => number | null) => {
+    const ok = parts.filter((p) => f(p) !== null && p.speakingTime > 0);
+    const w = ok.reduce((s, p) => s + p.speakingTime, 0);
+    return w ? ok.reduce((s, p) => s + f(p)! * p.speakingTime, 0) / w : null;
+  };
+  let offset = 0;
+  const hesitationTimes: number[] = [];
+  for (const p of parts) {
+    hesitationTimes.push(...p.hesitationTimes.map((t) => t + offset));
+    offset += p.duration;
+  }
+  const pauses = sum((p) => p.pauses);
+  const speakingTime = sum((p) => p.speakingTime);
+  const syllables = sum((p) => p.syllables);
+  return {
+    duration: sum((p) => p.duration),
+    activeDuration: sum((p) => p.activeDuration),
+    speakingTime,
+    pauses,
+    longPauses: sum((p) => p.longPauses),
+    avgPause: pauses ? sum((p) => (p.avgPause ?? 0) * p.pauses) / pauses : null,
+    hesitations: sum((p) => p.hesitations),
+    hesitationTimes,
+    volumeDb: weighted((p) => p.volumeDb),
+    volumeVarDb: weighted((p) => p.volumeVarDb),
+    pitchHz: weighted((p) => p.pitchHz),
+    pitchVarSt: weighted((p) => p.pitchVarSt),
+    syllables,
+    syllableRate: speakingTime >= 3 ? syllables / speakingTime : null,
+    timeline: parts.flatMap((p) => p.timeline),
+  };
 }

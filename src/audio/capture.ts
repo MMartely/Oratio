@@ -1,6 +1,8 @@
 import { FRAME_SECONDS } from './voiceAnalyzer';
 
 export interface Capture {
+  /** Flux du micro, et de la caméra en mode miroir (pour l'aperçu vidéo). */
+  readonly stream: MediaStream;
   /** Démarre l'enregistrement audio (après le compte à rebours). */
   begin(): void;
   /** Arrête le micro et renvoie l'enregistrement audio (si le navigateur sait enregistrer). */
@@ -18,12 +20,14 @@ const MIME_TYPES = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/
  */
 export async function startCapture(
   onFrame: (frame: Float32Array, sampleRate: number, dt: number) => void,
+  options: { video?: boolean } = {},
 ): Promise<Capture> {
   if (!navigator.mediaDevices?.getUserMedia) throw new CaptureFailure('unsupported');
   let stream: MediaStream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+      video: options.video ? { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 } } : false,
     });
   } catch (e) {
     const name = (e as DOMException)?.name;
@@ -56,7 +60,8 @@ export async function startCapture(
   if (typeof MediaRecorder !== 'undefined') {
     const mimeType = MIME_TYPES.find((t) => MediaRecorder.isTypeSupported?.(t));
     try {
-      recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      // On n'enregistre que le son, même quand la caméra est ouverte.
+      recorder = new MediaRecorder(new MediaStream(stream.getAudioTracks()), mimeType ? { mimeType } : undefined);
       recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
     } catch {
       recorder = null;
@@ -70,6 +75,7 @@ export async function startCapture(
   };
 
   return {
+    stream,
     begin: () => {
       try {
         if (recorder?.state === 'inactive') recorder.start(1000);

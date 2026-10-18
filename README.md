@@ -24,7 +24,8 @@ npm test               # tests automatiques (analyse vocale, tics, notes, coach)
 | `src/store/useApp.ts` | État de l'application : session, réponses d'onboarding, progression, séries |
 | `src/services/backend.ts` | Interface comptes + données. Implémentation actuelle : **mode démo** (stockage local). Supabase viendra la remplacer sans toucher aux écrans. |
 | `src/data/` | Coachs, fonctionnalités, parcours de 30 jours, badges |
-| `src/audio/` | Micro, enregistrement, transcription (reconnaissance vocale du navigateur), analyse du son |
+| `src/audio/` | Micro et caméra, enregistrement, transcription, voix de synthèse du recruteur, analyse du son |
+| `src/screens/scenario/` | Situations : entretien d'embauche, exposé, pitch, discours d'événement |
 | `src/analysis/` | Mots parasites, débit, pauses, notes sur 100, assemblage du bilan |
 | `src/services/coach/` | Le coach qui commente le discours : règles locales en mode démo, Claude une fois Supabase branché |
 | `supabase/migrations/` | Tables, règles de sécurité (chacun ne voit que ses données), quota d'analyses IA, stockage audio Premium |
@@ -57,7 +58,7 @@ Limites connues, à vérifier sur de vrais téléphones : Firefox ne propose pas
 - [x] Étape 1 — Fondations : design calme et doux, FR/EN, thème clair/sombre, onboarding, choix du coach (Léa, Malik, Sofia), comptes (mode démo), accueil, parcours, progrès, profil, page Premium
 - [x] Étape 2 — Analyse vocale : écoute en direct avec signaux discrets, transcription, « euh », débit, pauses, volume, intonation, note sur 100, bilan du coach (simulé), réécoute, import d'enregistrement, historique, courbe de progression, badges
 - [ ] Leçons du parcours de 30 jours
-- [ ] Situations : entretien, exposé, pitch, discours d'événement
+- [x] Étape 4 — Situations : entretien d'embauche (recruteur à voix haute, questions et relances adaptées par Claude, bilan question par question), exposé, pitch et discours d'événement devant un public virtuel qui réagit à la voix ou en caméra miroir, liste des incontournables, respect du temps ; pitch et discours en Premium (essai possible en mode démo)
 - [ ] Improvisation et respiration anti-trac
 - [ ] Téléprompteur + vidéo
 - [x] Étape 3 — Branchement : comptes Supabase (e-mail confirmé + Google), progression synchronisée, coach Claude Opus 5.5 côté serveur avec quota de 3 analyses par jour, audio conservé en Premium, mise en ligne automatique sur GitHub Pages

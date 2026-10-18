@@ -93,7 +93,9 @@ export function ProgressScreen() {
                       {s.source === 'upload' ? <Upload size={18} /> : <Mic size={18} />}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-bold">{s.topic ?? (s.source === 'upload' ? d.progress.uploaded : d.features.analysis.label)}</span>
+                      <span className="block truncate font-bold">
+                        {s.scenario ? d.scenarios[s.scenario.id].label : (s.topic ?? (s.source === 'upload' ? d.progress.uploaded : d.features.analysis.label))}
+                      </span>
                       <span className="block text-xs text-muted">
                         {new Date(s.createdAt).toLocaleDateString(lang, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                       </span>

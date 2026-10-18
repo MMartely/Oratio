@@ -14,6 +14,7 @@ import { recordingUrl } from '../../audio/recordings';
 import { CoachBubble } from '../../components/CoachBubble';
 import { BackButton, Button, Card, Pill, Screen } from '../../components/ui';
 import { getCoach } from '../../data/coaches';
+import { ScenarioSection } from './ScenarioSection';
 import { backend } from '../../services/backend';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../store/useApp';
@@ -185,7 +186,10 @@ export function Results() {
         <BackButton to="/" label={d.common.back} />
         <div>
           <h1 className="text-2xl font-semibold">{d.results.title}</h1>
-          <p className="text-xs text-muted">{date}</p>
+          <p className="text-xs text-muted">
+            {result.scenario ? `${d.scenarios[result.scenario.id].label}${result.topic ? ` · ${result.topic}` : ''} · ` : ''}
+            {date}
+          </p>
         </div>
       </div>
 
@@ -212,6 +216,8 @@ export function Results() {
           </div>
         ))}
       </Card>
+
+      <ScenarioSection result={result} />
 
       <div className="grid grid-cols-2 gap-3">
         <MetricCard

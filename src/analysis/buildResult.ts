@@ -1,5 +1,5 @@
 import type { AcousticSummary } from '../audio/voiceAnalyzer';
-import { coachAI } from '../services/coach/coachAI';
+import { coachAI, type CoachRequest, type CoachResult } from '../services/coach/coachAI';
 import type { AnalysisResult, CoachId, Lang } from '../types';
 import { newId } from '../utils/id';
 import { analyzeFillers } from './fillers';
@@ -15,6 +15,10 @@ interface Input {
   coachId: CoachId;
   name: string;
   aiLocked: boolean;
+  /** Situation jouée : complétée ici par la liste de contrôle du coach. */
+  scenario?: AnalysisResult['scenario'];
+  /** Coach à utiliser à la place de l'analyse habituelle (bilan d'entretien). */
+  coach?: (req: CoachRequest) => Promise<CoachResult>;
 }
 
 const TIMELINE_BARS = 80;
@@ -35,7 +39,16 @@ export async function buildResult(input: Input): Promise<AnalysisResult> {
   const metrics = computeMetrics(acoustic, fillers, lang);
   const base = computeScores(metrics, acoustic.activeDuration, null);
   const transcript = fillers && fillers.words > 0 ? fillers.tokens : null;
-  const { feedback, aiLocked } = await coachAI.feedback({
+  const scenario = input.scenario;
+  const brief =
+    scenario && scenario.id !== 'interview'
+      ? {
+          id: scenario.id,
+          context: Object.fromEntries(Object.entries(scenario.context).filter(([, v]) => typeof v === 'string' && v)) as Record<string, string>,
+          targetSeconds: scenario.targetSeconds,
+        }
+      : undefined;
+  const { feedback, aiLocked } = await (input.coach ?? coachAI.feedback)({
     lang,
     coachId: input.coachId,
     name: input.name,
@@ -47,6 +60,7 @@ export async function buildResult(input: Input): Promise<AnalysisResult> {
     activeDuration: acoustic.activeDuration,
     globalWithoutContent: base.global,
     aiLocked: input.aiLocked,
+    scenario: brief,
   });
   const scores = computeScores(metrics, acoustic.activeDuration, feedback.contentScore);
   const minutes = Math.max(1, Math.round(acoustic.duration / 60));
@@ -80,6 +94,10 @@ export async function buildResult(input: Input): Promise<AnalysisResult> {
     aiLocked,
     timeline: downsample(acoustic.timeline, TIMELINE_BARS),
     hesitationMarks: acoustic.hesitationTimes.map((t) => Math.round((t / Math.max(acoustic.duration, 1)) * 1000) / 1000),
-    xp: 10 + Math.round(scores.global / 10) + 2 * minutes,
+    xp: 10 + Math.round(scores.global / 10) + 2 * minutes + (scenario ? 5 : 0),
+    scenario: scenario && {
+      ...scenario,
+      checklist: feedback.checklist ? Object.entries(feedback.checklist).map(([key, done]) => ({ key, done })) : scenario.checklist,
+    },
   };
 }

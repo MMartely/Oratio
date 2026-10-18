@@ -1,7 +1,7 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import type { Token } from '../../analysis/fillers';
 import type { Metrics } from '../../analysis/metrics';
-import { normalizeReply, type CoachPayload } from '../../../supabase/functions/_shared/coach.ts';
+import { normalizeReply, type CoachPayload, type ScenarioBrief } from '../../../supabase/functions/_shared/coach.ts';
 import type { CoachFeedback, CoachId, Lang } from '../../types';
 import { supabase } from '../supabase';
 import { demoFeedback } from './demoCoach';
@@ -20,6 +20,8 @@ export interface CoachRequest {
   globalWithoutContent: number;
   /** Quota atteint : pas d'analyse du contenu par l'IA. */
   aiLocked: boolean;
+  /** Situation jouée (exposé, pitch, discours), pour juger le contenu par rapport à elle. */
+  scenario?: ScenarioBrief;
 }
 
 export interface CoachResult {
@@ -64,6 +66,7 @@ function toPayload(req: CoachRequest): CoachPayload {
     },
     breakdown: req.breakdown,
     overused: req.overused,
+    scenario: req.scenario,
   };
 }
 
@@ -77,7 +80,7 @@ const claudeCoach = (sb: NonNullable<typeof supabase>): CoachAI => ({
       const quota = error instanceof FunctionsHttpError && error.context instanceof Response && error.context.status === 402;
       return { feedback: demoFeedback({ ...req, aiLocked: quota }), aiLocked: quota };
     }
-    const reply = normalizeReply(data);
+    const reply = normalizeReply(data, req.scenario);
     if (!reply) return demoCoach.feedback(req);
     return { feedback: { source: 'claude', ...reply }, aiLocked: false };
   },

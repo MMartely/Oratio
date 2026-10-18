@@ -1,9 +1,13 @@
 import { Check, Crown } from 'lucide-react';
 import { BackButton, Button, Screen } from '../components/ui';
 import { useI18n } from '../i18n';
+import { backend } from '../services/backend';
+import { useApp } from '../store/useApp';
 
 export function Premium() {
   const { d } = useI18n();
+  const plan = useApp((s) => s.data?.plan);
+  const setDemoPlan = useApp((s) => s.setDemoPlan);
   return (
     <Screen>
       <BackButton label={d.common.back} />
@@ -24,9 +28,18 @@ export function Premium() {
           ))}
         </ul>
       </div>
-      <Button full disabled className="mt-8">
-        {d.premium.cta}
-      </Button>
+      {backend.mode === 'demo' ? (
+        <div className="mt-8 space-y-2">
+          {plan === 'premium' && <p className="text-center text-sm font-semibold text-muted">{d.premium.demoActive}</p>}
+          <Button full variant={plan === 'premium' ? 'secondary' : 'primary'} onClick={() => setDemoPlan(plan === 'premium' ? 'free' : 'premium')}>
+            {plan === 'premium' ? d.premium.demoOff : d.premium.demoOn}
+          </Button>
+        </div>
+      ) : (
+        <Button full disabled className="mt-8">
+          {d.premium.cta}
+        </Button>
+      )}
     </Screen>
   );
 }

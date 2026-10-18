@@ -3,6 +3,43 @@
 
 export type CoachId = 'lea' | 'malik' | 'sofia';
 export type Lang = 'fr' | 'en';
+export type MonologueId = 'talk' | 'pitch' | 'event';
+
+/** Situation jouée (exposé, pitch, discours) : le contenu est jugé par rapport à elle. */
+export interface ScenarioBrief {
+  id: MonologueId;
+  context: Record<string, string>;
+  targetSeconds: number;
+}
+
+/** Éléments attendus dans chaque situation, cochés par le coach. */
+export const CHECKLISTS: Record<MonologueId, readonly string[]> = {
+  talk: ['intro', 'plan', 'examples', 'conclusion'],
+  pitch: ['problem', 'solution', 'audience', 'proof', 'ask'],
+  event: ['honoree', 'anecdote', 'emotion', 'toast'],
+};
+
+const CHECKLIST_MEANING: Record<string, string> = {
+  intro: 'an opening that announces the subject',
+  plan: 'an announced or clearly signposted structure',
+  examples: 'at least one concrete example',
+  conclusion: 'a clear conclusion or closing line',
+  problem: 'states the problem or need being addressed',
+  solution: 'presents the solution',
+  audience: 'names the target customers or market',
+  proof: 'gives evidence such as figures, traction or results',
+  ask: 'ends with a clear ask (investment, partnership, next step)',
+  honoree: 'mentions the person or people being celebrated by name',
+  anecdote: 'tells a personal anecdote',
+  emotion: 'expresses feelings, gratitude or wishes',
+  toast: 'ends with a toast or a clear closing wish',
+};
+
+const SITUATION: Record<MonologueId, string> = {
+  talk: 'a presentation in front of an audience',
+  pitch: 'a short pitch to convince listeners',
+  event: 'a speech at a personal event',
+};
 
 /** Ce que l'application envoie au coach après une analyse. */
 export interface CoachPayload {
@@ -25,6 +62,7 @@ export interface CoachPayload {
   };
   breakdown: { label: string; count: number }[];
   overused: { word: string; count: number }[];
+  scenario?: ScenarioBrief;
 }
 
 /** Réponse du coach, déjà validée. */
@@ -34,6 +72,7 @@ export interface CoachReply {
   strengths: string[];
   tips: string[];
   rewrite: { before: string; after: string } | null;
+  checklist?: Record<string, boolean>;
 }
 
 export const FREE_AI_PER_DAY = 3;
@@ -52,8 +91,17 @@ const LANGUAGE: Record<Lang, string> = {
   en: 'Write everything in English. Use “ ” when quoting their words.',
 };
 
-/** Consignes du coach. Stables pour un coach et une langue donnés. */
-export function systemPrompt(coachId: CoachId, lang: Lang) {
+function scenarioSection(scenario?: ScenarioBrief) {
+  if (!scenario) return '';
+  const items = CHECKLISTS[scenario.id].map((k) => `  - ${k}: ${CHECKLIST_MEANING[k]}`).join('\n');
+  return `
+
+This time the speaker practised ${SITUATION[scenario.id]}. Judge the content against what this situation requires, using the context given in the message. Also return a checklist: for each item below, true only if the talk clearly contains it.
+${items}`;
+}
+
+/** Consignes du coach. Stables pour un coach, une langue et une situation donnés. */
+export function systemPrompt(coachId: CoachId, lang: Lang, scenario?: ScenarioBrief) {
   return `${PERSONAS[coachId]}
 
 You work inside Oratio, an app that helps beginners overcome stage fright. The speaker has just practised speaking aloud on their own. You receive the automatic transcript of what they said and measurements computed on their device. Your job is to give feedback, mostly on the content of the talk, and to help them prioritise.
@@ -72,7 +120,7 @@ What to return:
 - tips: two or three concrete tips, the most useful first. For delivery issues (filler words, pace, volume, monotone voice, missing pauses), explain how to practise, not only what to fix.
 - rewrite: choose one real passage of at most 30 words from the transcript that could be stronger. "before" is copied from the transcript; "after" keeps their meaning and voice but is tighter and more confident, without filler words. If the transcript is too short to choose one, return empty strings.
 
-Write plain text without markdown or emojis, in short, natural sentences.`;
+Write plain text without markdown or emojis, in short, natural sentences.${scenarioSection(scenario)}`;
 }
 
 const describeVolume = (db: number | null) =>
@@ -86,9 +134,17 @@ export function userMessage(p: CoachPayload) {
   const fillers = p.breakdown.map((b) => `${b.label} ×${b.count}`).join(', ') || 'none';
   const overused = p.overused.map((o) => `${o.word} ×${o.count}`).join(', ') || 'none';
   const seconds = Math.round(p.activeDuration);
+  const situation = p.scenario
+    ? `Situation: ${SITUATION[p.scenario.id]}
+${Object.entries(p.scenario.context)
+  .map(([k, v]) => `- ${k}: ${v}`)
+  .join('\n')}
+Target duration: ${Math.round(p.scenario.targetSeconds / 60)} min
+`
+    : '';
   return `Speaker's first name: ${p.name}
 Topic: ${p.topic ?? 'free topic, chosen by the speaker'}
-Speaking time: ${Math.floor(seconds / 60)} min ${seconds % 60} s
+${situation}Speaking time: ${Math.floor(seconds / 60)} min ${seconds % 60} s
 
 Measurements:
 - words: ${m.words}
@@ -106,6 +162,24 @@ ${p.transcript}
 }
 
 /** Format JSON imposé à la réponse (structured outputs). */
+export function replySchemaFor(scenario?: ScenarioBrief) {
+  if (!scenario) return replySchema;
+  const keys = CHECKLISTS[scenario.id];
+  return {
+    ...replySchema,
+    properties: {
+      ...replySchema.properties,
+      checklist: {
+        type: 'object',
+        properties: Object.fromEntries(keys.map((k) => [k, { type: 'boolean' }])),
+        required: [...keys],
+        additionalProperties: false,
+      },
+    },
+    required: [...replySchema.required, 'checklist'],
+  };
+}
+
 export const replySchema = {
   type: 'object',
   properties: {
@@ -131,7 +205,7 @@ const list = (v: unknown, max: number) =>
   Array.isArray(v) ? v.map((x) => text(x, 400)).filter(Boolean).slice(0, max) : [];
 
 /** Vérifie et borne la réponse du modèle. Renvoie null si elle est inutilisable. */
-export function normalizeReply(raw: unknown): CoachReply | null {
+export function normalizeReply(raw: unknown, scenario?: ScenarioBrief): CoachReply | null {
   if (!isRecord(raw)) return null;
   const score = num(raw.contentScore);
   const summary = text(raw.summary, 600);
@@ -141,14 +215,21 @@ export function normalizeReply(raw: unknown): CoachReply | null {
   const rw = isRecord(raw.rewrite) ? raw.rewrite : {};
   const before = text(rw.before, 400);
   const after = text(rw.after, 400);
-  return {
-    contentScore: Math.round(Math.max(0, Math.min(100, score))),
+  const reply: CoachReply = {
+    contentScore: clampScore(score),
     summary,
     strengths,
     tips,
     rewrite: before && after ? { before, after } : null,
   };
+  if (scenario) {
+    const cl = isRecord(raw.checklist) ? raw.checklist : {};
+    reply.checklist = Object.fromEntries(CHECKLISTS[scenario.id].map((k) => [k, cl[k] === true]));
+  }
+  return reply;
 }
+
+const clampScore = (v: number) => Math.round(Math.max(0, Math.min(100, v)));
 
 /** Vérifie la requête de l'application avant d'appeler le modèle. */
 export function parsePayload(raw: unknown): CoachPayload | null {
@@ -183,5 +264,18 @@ export function parsePayload(raw: unknown): CoachPayload | null {
     },
     breakdown: pairs(raw.breakdown, 'label'),
     overused: pairs(raw.overused, 'word'),
+    scenario: parseScenario(raw.scenario),
   };
+}
+
+function parseScenario(raw: unknown): ScenarioBrief | undefined {
+  if (!isRecord(raw) || !(raw.id === 'talk' || raw.id === 'pitch' || raw.id === 'event')) return undefined;
+  const ctx = isRecord(raw.context) ? raw.context : {};
+  const context = Object.fromEntries(
+    Object.entries(ctx)
+      .slice(0, 8)
+      .map(([k, v]) => [k.slice(0, 20), text(v, 120)])
+      .filter(([, v]) => v),
+  );
+  return { id: raw.id, context, targetSeconds: Math.max(30, Math.min(1800, num(raw.targetSeconds) ?? 120)) };
 }

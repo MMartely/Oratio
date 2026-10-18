@@ -1,4 +1,5 @@
 import type { Token } from '../../analysis/fillers';
+import { demoChecklist } from '../../analysis/scenarios';
 import { IDEAL_WPM, fillerStatus, intonationStatus, paceStatus, volumeStatus } from '../../analysis/metrics';
 import { fmt } from '../../i18n';
 import type { CoachFeedback, CoachId, Lang } from '../../types';
@@ -175,6 +176,9 @@ export function demoFeedback(req: CoachRequest): CoachFeedback {
     strengths: strengths.slice(0, 3),
     tips: sortedTips.slice(0, 3),
     rewrite: aiLocked ? null : rewriteExample(transcript),
+    checklist: req.scenario
+      ? demoChecklist(req.scenario.id, transcript?.map((t) => t.w).join(' ') ?? null, req.scenario.context, lang)
+      : undefined,
   };
 }
 

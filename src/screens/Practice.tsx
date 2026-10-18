@@ -19,7 +19,7 @@ export function Practice() {
           {scenarios.map(({ id, icon: Icon, premium }) => (
             <Link
               key={id}
-              to={`/soon/${id}`}
+              to={`/scenario/${id}`}
               className="relative rounded-3xl border border-line bg-surface p-4 shadow-soft transition active:scale-[.98]"
             >
               {premium && plan === 'free' && (

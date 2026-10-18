@@ -1,7 +1,7 @@
+import type { ScenarioId } from '../types';
 import { Briefcase, Mic, Presentation, Rocket, ScrollText, Shuffle, Users, Wind, PartyPopper, type LucideIcon } from 'lucide-react';
 
 export type FeatureId = 'analysis' | 'scenarios' | 'impro' | 'breathing' | 'teleprompter';
-export type ScenarioId = 'interview' | 'talk' | 'pitch' | 'event';
 
 /** Classes de couleur par fonctionnalité (fond doux + icône). */
 export const features: { id: FeatureId; icon: LucideIcon; tone: string }[] = [
@@ -26,4 +26,6 @@ export const FREE_PATH_DAYS = 7;
 export const FREE_AI_PER_DAY = 3;
 
 /** Écran de chaque fonctionnalité ; celles pas encore construites mènent à « En construction ». */
-export const featureRoute = (id: FeatureId) => (id === 'analysis' ? '/analysis' : `/soon/${id}`);
+export const featureRoute = (id: FeatureId) => (id === 'analysis' ? '/analysis' : id === 'scenarios' ? '/practice' : `/soon/${id}`);
+
+export type { ScenarioId };

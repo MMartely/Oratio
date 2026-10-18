@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { backend } from '../services/backend';
 import { safeStorage } from '../services/safeStorage';
 import { FREE_AI_PER_DAY } from '../data/features';
-import type { AnalysisResult, Lang, Onboarding, Profile, Progress, Theme, UserData } from '../types';
+import type { AnalysisResult, Lang, Onboarding, Plan, Profile, Progress, Theme, UserData } from '../types';
 
 export const todayKey = (date = new Date()) => {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -90,6 +90,8 @@ interface AppState {
   recordActivity(minutes: number, xp: number): void;
   /** Sauvegarde une analyse vocale et met à jour la progression. */
   addAnalysis(result: AnalysisResult): void;
+  /** Mode démo uniquement : essayer Premium sans paiement. */
+  setDemoPlan(plan: Plan): void;
 }
 
 export const useApp = create<AppState>()(
@@ -167,6 +169,11 @@ export const useApp = create<AppState>()(
               minutesDay: today,
             },
           });
+        },
+
+        setDemoPlan: (plan) => {
+          const data = get().data;
+          if (data && backend.mode === 'demo') commit({ ...data, plan });
         },
 
         addAnalysis: (result) => {

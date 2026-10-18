@@ -3,6 +3,7 @@ import { HashRouter, MemoryRouter, Navigate, Route, Routes } from 'react-router-
 import { AppShell } from './components/AppShell';
 import { AnalysisFlow } from './screens/analysis/AnalysisFlow';
 import { Results } from './screens/analysis/Results';
+import { ScenarioRoute } from './screens/scenario/ScenarioRoute';
 import { AuthScreen } from './screens/auth/AuthScreen';
 import { Home } from './screens/Home';
 import { Onboarding } from './screens/onboarding/Onboarding';
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="/soon/:feature" element={<RequireAuth><Soon /></RequireAuth>} />
         <Route path="/analysis" element={<RequireAuth><AnalysisFlow /></RequireAuth>} />
         <Route path="/analysis/result/:id" element={<RequireAuth><Results /></RequireAuth>} />
+        <Route path="/scenario/:id" element={<RequireAuth><ScenarioRoute /></RequireAuth>} />
         <Route element={<RequireAuth><AppShell /></RequireAuth>}>
           <Route index element={<Home />} />
           <Route path="/path" element={<Path />} />

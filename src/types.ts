@@ -66,12 +66,51 @@ export class AuthError extends Error {
 
 export interface CoachFeedback {
   source: 'demo' | 'claude';
+  /** Éléments attendus dans la situation (accroche, plan, toast…) : présents ou non. */
+  checklist?: Record<string, boolean>;
   /** Note du contenu (structure, clarté, vocabulaire), absente sans transcription. */
   contentScore: number | null;
   summary: string;
   strengths: string[];
   tips: string[];
   rewrite: { before: string; after: string } | null;
+}
+
+export type ScenarioId = 'interview' | 'talk' | 'pitch' | 'event';
+export type AudienceMode = 'audience' | 'mirror';
+
+/** Ce que l'utilisateur précise avant une situation. */
+export interface ScenarioContext {
+  role?: string;
+  company?: string;
+  subject?: string;
+  project?: string;
+  listeners?: 'investors' | 'jury' | 'clients';
+  eventType?: 'wedding' | 'birthday' | 'thanks' | 'toast' | 'other';
+  honoree?: string;
+  tone?: 'moving' | 'funny' | 'sober';
+}
+
+export interface InterviewAnswer {
+  question: string;
+  /** Vrai pour une question de relance posée après la réponse précédente. */
+  followUp: boolean;
+  transcript: string | null;
+  seconds: number;
+  score: number | null;
+  feedback: string | null;
+}
+
+export interface ScenarioInfo {
+  id: ScenarioId;
+  context: ScenarioContext;
+  targetSeconds: number;
+  mode?: AudienceMode;
+  /** Attention moyenne du public virtuel, de 0 à 100. */
+  attention?: number;
+  timing?: 'short' | 'ok' | 'long';
+  checklist?: { key: string; done: boolean }[];
+  answers?: InterviewAnswer[];
 }
 
 export interface AnalysisResult {
@@ -97,4 +136,6 @@ export interface AnalysisResult {
   xp: number;
   /** Audio conservé sur le serveur (formule Premium). */
   recorded?: boolean;
+  /** Présent quand l'analyse vient d'une situation (entretien, exposé, pitch, discours). */
+  scenario?: ScenarioInfo;
 }
