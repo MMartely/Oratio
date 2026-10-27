@@ -22,6 +22,12 @@ export interface Onboarding {
   done: boolean;
   /** Rappel quotidien : heure locale « HH:MM », ou null s'il est désactivé. */
   reminder?: string | null;
+  /** Jours du rappel : bit 0 = lundi … bit 6 = dimanche (127 par défaut). */
+  reminderDays?: number;
+  /** Alerte le soir si la série est en danger (activée par défaut). */
+  streakAlert?: boolean;
+  /** « Bravo » le lendemain d'une leçon (activé par défaut). */
+  bravo?: boolean;
 }
 
 export interface Progress {

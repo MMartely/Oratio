@@ -27,7 +27,18 @@ async function publicKey() {
 }
 
 /** Active (ou met à jour) le rappel quotidien sur cet appareil. */
-export async function enableReminder(input: { userId: string; time: string; lang: Lang; coachId: CoachId }) {
+export interface ReminderSettings {
+  userId: string;
+  time: string;
+  lang: Lang;
+  coachId: CoachId;
+  /** Jours du rappel : bit 0 = lundi … bit 6 = dimanche. */
+  days: number;
+  streakAlert: boolean;
+  bravo: boolean;
+}
+
+export async function enableReminder(input: ReminderSettings) {
   if (!remindersSupported()) throw new ReminderFailure('unsupported');
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') throw new ReminderFailure('denied');
@@ -48,6 +59,9 @@ export async function enableReminder(input: { userId: string; time: string; lang
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
         lang: input.lang,
         coach_id: input.coachId,
+        days: input.days,
+        streak_alert: input.streakAlert,
+        bravo: input.bravo,
       },
       { onConflict: 'endpoint' },
     );

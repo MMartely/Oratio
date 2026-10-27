@@ -5,29 +5,61 @@ import { ReminderFailure, disableReminder, enableReminder, remindersSupported, t
 import { useApp } from '../store/useApp';
 import { Button, Card } from './ui';
 
-/** Réglage du rappel quotidien (notification du coach si la leçon du jour n'est pas faite). */
+const ALL_DAYS = 127;
+
+function Toggle({ id, label, hint, checked, onChange }: { id: string; label: string; hint: string; checked: boolean; onChange(v: boolean): void }) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-3">
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold">{label}</span>
+        <span className="block text-xs text-muted">{hint}</span>
+      </span>
+      <input id={id} type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
+      <span
+        aria-hidden
+        className={`relative mt-0.5 h-7 w-12 shrink-0 rounded-full transition peer-focus-visible:ring-2 peer-focus-visible:ring-primary ${checked ? 'bg-primary' : 'bg-line'}`}
+      >
+        <span className={`absolute top-0.5 size-6 rounded-full bg-white shadow transition-all ${checked ? 'left-[22px]' : 'left-0.5'}`} />
+      </span>
+    </label>
+  );
+}
+
+/** Réglage des rappels : heure, jours, alerte « série en danger » et « bravo » du lendemain. */
 export function ReminderCard() {
   const { d, lang } = useI18n();
   const session = useApp((s) => s.session)!;
   const data = useApp((s) => s.data)!;
   const updateOnboarding = useApp((s) => s.updateOnboarding);
-  const reminder = data.onboarding.reminder ?? null;
-  const coachId = data.onboarding.coachId ?? 'lea';
+  const o = data.onboarding;
+  const reminder = o.reminder ?? null;
+  const coachId = o.coachId ?? 'lea';
   const supported = remindersSupported();
   const [time, setTime] = useState(reminder ?? '19:00');
+  const [days, setDays] = useState(o.reminderDays ?? ALL_DAYS);
+  const [streakAlert, setStreakAlert] = useState(o.streakAlert ?? true);
+  const [bravo, setBravo] = useState(o.bravo ?? true);
   const [status, setStatus] = useState<'idle' | 'busy' | 'saved' | ReminderError>('idle');
 
   // Le message du rappel suit le coach et la langue choisis.
   useEffect(() => {
     if (!reminder || !supported || Notification.permission !== 'granted') return;
-    enableReminder({ userId: session.id, time: reminder, lang, coachId }).catch(() => undefined);
+    enableReminder({
+      userId: session.id,
+      time: reminder,
+      lang,
+      coachId,
+      days: o.reminderDays ?? ALL_DAYS,
+      streakAlert: o.streakAlert ?? true,
+      bravo: o.bravo ?? true,
+    }).catch(() => undefined);
   }, [coachId, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     setStatus('busy');
     try {
-      await enableReminder({ userId: session.id, time, lang, coachId });
-      updateOnboarding({ reminder: time });
+      await enableReminder({ userId: session.id, time, lang, coachId, days, streakAlert, bravo });
+      updateOnboarding({ reminder: time, reminderDays: days, streakAlert, bravo });
       setStatus('saved');
     } catch (e) {
       setStatus(e instanceof ReminderFailure ? e.code : 'error');
@@ -41,11 +73,16 @@ export function ReminderCard() {
     setStatus('idle');
   };
 
+  const change = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    if (status === 'saved') setStatus('idle');
+  };
+
   const message =
     status === 'saved' ? d.reminders.saved : status === 'denied' ? d.reminders.denied : status === 'error' ? d.reminders.error : null;
 
   return (
-    <Card className="space-y-3">
+    <Card className="space-y-4">
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sky/30 text-[#336C99] dark:text-sky">
           {reminder ? <Bell size={20} /> : <BellOff size={20} />}
@@ -66,13 +103,36 @@ export function ReminderCard() {
               id="reminder-time"
               type="time"
               value={time}
-              onChange={(e) => setTime(e.target.value)}
+              onChange={(e) => change(setTime)(e.target.value)}
               className="h-11 rounded-2xl border border-line bg-surface px-3 font-bold text-ink"
             />
           </label>
+          <div>
+            <p className="text-sm font-bold">{d.reminders.days}</p>
+            <div className="mt-2 flex justify-between gap-1" role="group" aria-label={d.reminders.days}>
+              {d.reminders.dayShort.map((short, i) => {
+                const on = Boolean(days & (1 << i));
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-pressed={on}
+                    aria-label={d.reminders.dayNames[i]}
+                    onClick={() => change(setDays)(days ^ (1 << i))}
+                    className={`grid size-10 place-items-center rounded-full text-sm font-extrabold transition ${on ? 'bg-primary text-white' : 'bg-soft text-muted'}`}
+                  >
+                    {short}
+                  </button>
+                );
+              })}
+            </div>
+            {days === 0 && <p className="mt-2 text-xs font-semibold text-[#9A4B2E] dark:text-peach">{d.reminders.oneDayMin}</p>}
+          </div>
+          <Toggle id="reminder-streak" label={d.reminders.streakAlert} hint={d.reminders.streakAlertHint} checked={streakAlert} onChange={change(setStreakAlert)} />
+          <Toggle id="reminder-bravo" label={d.reminders.bravo} hint={d.reminders.bravoHint} checked={bravo} onChange={change(setBravo)} />
           <div className="flex gap-2">
-            <Button className="flex-1" disabled={status === 'busy' || !time} onClick={() => void save()}>
-              {d.reminders.enable}
+            <Button className="flex-1" disabled={status === 'busy' || !time || days === 0} onClick={() => void save()}>
+              {reminder ? d.reminders.save : d.reminders.enable}
             </Button>
             {reminder && (
               <Button variant="secondary" disabled={status === 'busy'} onClick={() => void turnOff()}>

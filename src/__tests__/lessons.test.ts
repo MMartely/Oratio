@@ -16,18 +16,53 @@ describe('contenu des leçons', () => {
         const plan = PROGRAM[i];
         expect(l.intro.length, `jour ${i + 1}`).toBeGreaterThan(40);
         expect(l.points).toHaveLength(3);
-        expect(l.quiz).toHaveLength(2);
+        // Une question pour tous, deux de plus dans « Aller plus loin ».
+        expect(l.quiz).toHaveLength(3);
         l.quiz.forEach((q) => {
           expect(q.options).toHaveLength(3);
           expect(q.answer).toBeGreaterThanOrEqual(0);
           expect(q.answer).toBeLessThan(3);
+          expect(q.why.length).toBeGreaterThan(10);
         });
+        // Démonstration brève.
         expect(l.demo.length).toBeGreaterThanOrEqual(2);
+        expect(l.demo.length).toBeLessThanOrEqual(3);
+        expect(l.example.title.length, `exemple jour ${i + 1}`).toBeGreaterThan(3);
+        expect(l.example.text.length, `exemple jour ${i + 1}`).toBeGreaterThan(40);
+        expect(l.bonus.length, `astuce jour ${i + 1}`).toBeGreaterThan(20);
         expect(Boolean(l.read), `lecture jour ${i + 1}`).toBe(Boolean(plan.reading));
         expect(Boolean(l.question), `question jour ${i + 1}`).toBe(Boolean(plan.asked));
       });
     });
   }
+});
+
+describe('difficulté progressive', () => {
+  const thresholds = (kind: string) =>
+    PROGRAM.flatMap((p) => {
+      const o = p.objective;
+      if (o.kind !== kind) return [];
+      if (o.kind === 'pauses' || o.kind === 'intonation' || o.kind === 'volume') return [o.min];
+      if (o.kind === 'speak') return [o.seconds];
+      if (o.kind === 'fillers') return [-o.max];
+      return [];
+    });
+
+  it('rend chaque objectif de plus en plus exigeant au fil des semaines', () => {
+    for (const kind of ['pauses', 'intonation', 'volume', 'speak', 'fillers']) {
+      const values = thresholds(kind);
+      expect(values.length, kind).toBeGreaterThan(1);
+      values.forEach((v, i) => i > 0 && expect(v, `${kind} n°${i + 1}`).toBeGreaterThanOrEqual(values[i - 1]));
+      expect(values[values.length - 1], kind).toBeGreaterThan(values[0]);
+    }
+  });
+
+  it('laisse toujours le temps d’atteindre l’objectif', () => {
+    PROGRAM.forEach((p) => {
+      if (p.objective.kind === 'speak') expect(p.seconds).toBeGreaterThan(p.objective.seconds);
+      if (p.objective.kind === 'duration') expect(p.seconds).toBeGreaterThan(p.objective.target * 1.25);
+    });
+  });
 });
 
 const acoustic = (patch: Partial<AcousticSummary> = {}): AcousticSummary => ({

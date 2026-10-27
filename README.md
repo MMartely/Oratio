@@ -25,7 +25,7 @@ npm test               # tests automatiques (analyse vocale, tics, notes, coach)
 | `src/services/backend.ts` | Interface comptes + données. Implémentation actuelle : **mode démo** (stockage local). Supabase viendra la remplacer sans toucher aux écrans. |
 | `src/data/` | Coachs, fonctionnalités, badges |
 | `src/data/lessons/` | Les 30 leçons : programme et objectifs, textes FR/EN, calcul des étoiles, déblocage quotidien |
-| `supabase/functions/reminders/` | Rappels quotidiens par notification |
+| `supabase/functions/reminders/` | Rappels par notification (leçon du jour, série en danger, bravo) |
 | `src/audio/` | Micro et caméra, enregistrement, transcription, voix de synthèse du recruteur, analyse du son |
 | `src/screens/scenario/` | Situations : entretien d'embauche, exposé, pitch, discours d'événement |
 | `src/analysis/` | Mots parasites, débit, pauses, notes sur 100, assemblage du bilan |
@@ -60,6 +60,7 @@ Limites connues, à vérifier sur de vrais téléphones : Firefox ne propose pas
 - [x] Étape 1 — Fondations : design calme et doux, FR/EN, thème clair/sombre, onboarding, choix du coach (Léa, Malik, Sofia), comptes (mode démo), accueil, parcours, progrès, profil, page Premium
 - [x] Étape 2 — Analyse vocale : écoute en direct avec signaux discrets, transcription, « euh », débit, pauses, volume, intonation, note sur 100, bilan du coach (simulé), réécoute, import d'enregistrement, historique, courbe de progression, badges
 - [x] Étape 5 — Leçons du parcours de 30 jours (FR/EN) : explication, mini-quiz, démonstration lue à voix haute, exercice parlé avec objectif mesuré et 1 à 3 étoiles, une leçon par jour avec rattrapage, respiration guidée ; rappel quotidien par notification (clés créées automatiquement, envoi toutes les 30 min, seulement si la leçon n'est pas faite)
+  - Révision : leçons d'environ 4 minutes (démonstration brève, 1 question, « Aller plus loin » facultatif avec exemple, astuce et 2 questions), respiration de 30 s à chaque leçon, deux essais guidés avec un conseil du coach entre les deux, exemples de toute la francophonie et du monde professionnel, objectifs progressifs ; rappels avec le titre de la leçon, alerte « série en danger », « bravo » du lendemain et choix des jours
 - [x] Étape 4 — Situations : entretien d'embauche (recruteur à voix haute, questions et relances adaptées par Claude, bilan question par question), exposé, pitch et discours d'événement devant un public virtuel qui réagit à la voix ou en caméra miroir, liste des incontournables, respect du temps ; pitch et discours en Premium (essai possible en mode démo)
 - [ ] Improvisation et respiration anti-trac
 - [ ] Téléprompteur + vidéo

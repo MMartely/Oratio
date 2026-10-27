@@ -1,10 +1,19 @@
 // Fonction serveur « reminders » :
 // - GET  : renvoie la clé publique des notifications (créée automatiquement au premier appel) ;
-// - POST : envoie les rappels dus (appelée toutes les 30 minutes par GitHub Actions).
-// Un rappel au plus par appareil et par jour, et seulement si l'utilisateur n'a pas encore pratiqué.
+// - POST : envoie les notifications dues (appelée toutes les 30 minutes par GitHub Actions) :
+//   rappel du jour avec le titre de la leçon, alerte « série en danger » le soir, « bravo » le lendemain d'une leçon.
+// Chaque type au plus une fois par jour et par appareil, seulement les jours choisis par l'utilisateur.
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
-import { isDue, practisedOn, reminderMessage, type Subscription } from '../_shared/reminders.ts';
+import {
+  BRAVO_MINUTES,
+  SENT_COLUMN,
+  STREAK_ALERT_MINUTES,
+  WINDOW_MINUTES,
+  localClock,
+  planNotification,
+  type Subscription,
+} from '../_shared/reminders.ts';
 
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -44,25 +53,30 @@ async function sendDue() {
   const now = new Date();
   const { data: subs, error } = await admin.from('push_subscriptions').select('*');
   if (error) throw new Error(error.message);
-  const due = (subs as Subscription[]).map((s) => ({ s, ...isDue(s, now) })).filter((x) => x.due);
-  if (!due.length) return { checked: subs.length, sent: 0, removed: 0 };
+  // On ne lit les profils que des appareils dont une heure d'envoi approche.
+  const candidates = (subs as Subscription[]).filter((s) => {
+    const { minutes } = localClock(now, s.timezone);
+    return [s.reminder_minutes, STREAK_ALERT_MINUTES, BRAVO_MINUTES].some((h) => minutes - h >= 0 && minutes - h < WINDOW_MINUTES);
+  });
+  if (!candidates.length) return { checked: subs.length, sent: 0, removed: 0 };
 
-  const ids = [...new Set(due.map((x) => x.s.user_id))];
-  const { data: profiles } = await admin.from('profiles').select('id, data').in('id', ids);
-  const dataById = new Map((profiles ?? []).map((p) => [p.id, p.data]));
+  const ids = [...new Set(candidates.map((s) => s.user_id))];
+  const { data: profiles } = await admin.from('profiles').select('id, data, plan').in('id', ids);
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
 
   let sent = 0;
   let removed = 0;
-  for (const { s, day } of due) {
-    if (practisedOn(dataById.get(s.user_id), day)) continue;
+  for (const s of candidates) {
+    const note = planNotification(s, profileById.get(s.user_id), now);
+    if (!note) continue;
     try {
       await webpush.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        JSON.stringify({ ...reminderMessage(s.coach_id, s.lang), url: './#/' }),
+        JSON.stringify({ title: note.title, body: note.body, url: './#/' }),
         { TTL: 6 * 3600 },
       );
       sent++;
-      await admin.from('push_subscriptions').update({ last_sent_day: day }).eq('endpoint', s.endpoint);
+      await admin.from('push_subscriptions').update({ [SENT_COLUMN[note.kind]]: note.day }).eq('endpoint', s.endpoint);
     } catch (e) {
       const status = (e as { statusCode?: number }).statusCode;
       // Abonnement expiré ou révoqué : on le supprime.

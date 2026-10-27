@@ -28,7 +28,7 @@ export interface LessonPlan {
   objective: Objective;
   /** Durée maximale de l'enregistrement, en secondes. */
   seconds: number;
-  /** Exercice de respiration guidé avant de parler. */
+  /** Respiration guidée plus longue (3 cycles au lieu de 2) avant le premier essai. */
   breathing?: boolean;
   /** Le coach pose une question à voix haute avant l'exercice. */
   asked?: boolean;
@@ -39,20 +39,20 @@ export interface LessonPlan {
 }
 
 export const PROGRAM: LessonPlan[] = [
-  // Semaine 1 — Apprivoiser le trac
+  // Semaine 1 — Apprivoiser le trac : objectifs très faciles.
   { day: 1, objective: { kind: 'speak', seconds: 10 }, seconds: 45, breathing: true },
   { day: 2, objective: { kind: 'duration', target: 30 }, seconds: 60 },
-  { day: 3, objective: { kind: 'pauses', min: 3 }, seconds: 60 },
-  { day: 4, objective: { kind: 'volume', min: -38 }, seconds: 45 },
-  { day: 5, objective: { kind: 'speak', seconds: 45 }, seconds: 75 },
-  { day: 6, objective: { kind: 'intonation', min: 1.8 }, seconds: 60 },
+  { day: 3, objective: { kind: 'pauses', min: 2 }, seconds: 60 },
+  { day: 4, objective: { kind: 'volume', min: -40 }, seconds: 45 },
+  { day: 5, objective: { kind: 'speak', seconds: 30 }, seconds: 60 },
+  { day: 6, objective: { kind: 'intonation', min: 1.5 }, seconds: 60 },
   { day: 7, objective: { kind: 'duration', target: 60 }, seconds: 90 },
   // Semaine 2 — Trouver ta voix
   { day: 8, objective: { kind: 'pace', min: 100, max: 150 }, seconds: 60, reading: true },
-  { day: 9, objective: { kind: 'fillers', max: 2 }, seconds: 60 },
+  { day: 9, objective: { kind: 'fillers', max: 3 }, seconds: 60 },
   { day: 10, objective: { kind: 'pace', min: 120, max: 165 }, seconds: 60 },
-  { day: 11, objective: { kind: 'intonation', min: 2.2 }, seconds: 60, reading: true },
-  { day: 12, objective: { kind: 'volume', min: -32 }, seconds: 45 },
+  { day: 11, objective: { kind: 'intonation', min: 2 }, seconds: 60, reading: true },
+  { day: 12, objective: { kind: 'volume', min: -34 }, seconds: 45 },
   { day: 13, objective: { kind: 'pauses', min: 4 }, seconds: 75 },
   { day: 14, objective: { kind: 'pace', min: 120, max: 165 }, seconds: 90, reading: true },
   // Semaine 3 — Structurer ton message
@@ -63,15 +63,15 @@ export const PROGRAM: LessonPlan[] = [
   { day: 19, objective: { kind: 'keywords', group: 'story' }, seconds: 90 },
   { day: 20, objective: { kind: 'keywords', group: 'analogy' }, seconds: 75 },
   { day: 21, objective: { kind: 'structure', keys: ['intro', 'plan', 'examples', 'conclusion'] }, seconds: 150 },
-  // Semaine 4 — Captiver ton public
-  { day: 22, objective: { kind: 'speak', seconds: 45 }, seconds: 75 },
-  { day: 23, objective: { kind: 'intonation', min: 2 }, seconds: 75 },
-  { day: 24, objective: { kind: 'fillers', max: 3 }, seconds: 90, asked: true },
-  { day: 25, objective: { kind: 'speak', seconds: 60 }, seconds: 90, randomTopic: true },
+  // Semaine 4 — Captiver ton public : objectifs plus exigeants.
+  { day: 22, objective: { kind: 'speak', seconds: 60 }, seconds: 90 },
+  { day: 23, objective: { kind: 'intonation', min: 2.2 }, seconds: 75 },
+  { day: 24, objective: { kind: 'fillers', max: 2 }, seconds: 90, asked: true },
+  { day: 25, objective: { kind: 'speak', seconds: 75 }, seconds: 105, randomTopic: true },
   { day: 26, objective: { kind: 'keywords', group: 'persuade' }, seconds: 90 },
-  { day: 27, objective: { kind: 'pauses', min: 3 }, seconds: 90 },
+  { day: 27, objective: { kind: 'pauses', min: 4 }, seconds: 90 },
   { day: 28, objective: { kind: 'structure', keys: ['intro', 'plan', 'examples', 'conclusion'] }, seconds: 180 },
-  { day: 29, objective: { kind: 'speak', seconds: 60 }, seconds: 90 },
+  { day: 29, objective: { kind: 'speak', seconds: 90 }, seconds: 120 },
   { day: 30, objective: { kind: 'keywords', group: 'future' }, seconds: 90 },
 ];
 

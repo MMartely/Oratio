@@ -90,9 +90,14 @@ Ensuite, chaque modification envoyée sur la branche `main` est mise en ligne au
 
 Rien à configurer : les clés des notifications sont créées automatiquement par le serveur au premier usage,
 et le processus **Rappels quotidiens** (onglet Actions) se déclenche toutes les 30 minutes.
-Chaque utilisateur active son rappel dans **Profil → Rappel quotidien** et choisit l'heure.
+Chaque utilisateur active son rappel dans **Profil → Rappel quotidien** et choisit l'heure et les jours.
 
-- Un rappel au plus par jour, et seulement si la leçon du jour n'est pas faite.
+- **Rappel du jour** : à l'heure choisie, avec le titre de la leçon, seulement si l'utilisateur n'a pas encore pratiqué.
+- **Série en danger** (activable) : vers 21 h 30, si la série risque d'être perdue ; pour un rappel réglé après 20 h,
+  c'est le rappel lui-même qui le signale.
+- **Bravo** (activable) : le lendemain d'une leçon, vers 9 h avec les étoiles obtenues ; pour un rappel du matin,
+  le bravo ouvre le rappel.
+- Chaque type de message part au plus une fois par jour, et rien n'est envoyé les jours non choisis.
 - GitHub peut retarder les tâches planifiées de quelques minutes : le rappel arrive « autour » de l'heure choisie.
 - Sur iPhone, les notifications demandent iOS 16.4 ou plus récent et l'application installée sur l'écran d'accueil.
 

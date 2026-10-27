@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Check, Mic, Play, Shuffle, Sparkles, Square, Target, Volume2, X } from 'lucide-react';
+import { BookOpen, Check, Lightbulb, Mic, Play, Shuffle, Sparkles, Square, Target, Volume2, X } from 'lucide-react';
 import { analyzeFillers } from '../../analysis/fillers';
 import { computeMetrics, type Metrics } from '../../analysis/metrics';
 import { CaptureFailure, type CaptureError } from '../../audio/capture';
@@ -21,8 +21,16 @@ import { lessonState, nextLessonDay } from '../../data/lessons/progress';
 import { fmt, useI18n, type Dict } from '../../i18n';
 import { todayKey, useApp } from '../../store/useApp';
 
-type Step = 'learn' | 'quiz' | 'demo' | 'practice' | 'result';
-const STEPS: Step[] = ['learn', 'quiz', 'demo', 'practice', 'result'];
+// Déroulé court (environ 4 minutes) : explication, démonstration, une question, puis deux essais guidés.
+// « Aller plus loin » ajoute un exemple, une astuce et deux questions.
+type Step = 'learn' | 'demo' | 'quiz' | 'more' | 'practice' | 'tip' | 'result';
+const STEPS: Step[] = ['learn', 'demo', 'quiz', 'more', 'practice', 'tip', 'result'];
+const GUIDED_TRIES = 2;
+
+interface Attempt {
+  score: LessonScore;
+  metrics: Metrics;
+}
 
 export function objectiveText(d: Dict, o: Objective) {
   const t = d.lesson.objectives;
@@ -55,6 +63,26 @@ function measuredText(d: Dict, o: Objective, s: LessonScore) {
   return fmt(m[o.kind], { n: s.value });
 }
 
+/** Conseil du coach entre les deux essais, selon l'objectif et le premier résultat. */
+export function tipText(d: Dict, o: Objective, s: LessonScore) {
+  const t = d.lesson.tips;
+  const met = s.stars >= 2;
+  if (s.value === null) return met ? t.generic.met : t.generic.unmet;
+  switch (o.kind) {
+    case 'pace':
+      return met ? fmt(t.pace.met, { n: s.value }) : fmt(s.value > o.max ? t.pace.fast : t.pace.slow, { n: s.value, min: o.min, max: o.max });
+    case 'duration':
+      return met ? t.duration.met : fmt(s.value > o.target ? t.duration.long : t.duration.short, { n: s.value, target: o.target });
+    case 'structure':
+      return fmt(met ? t.structure.met : t.structure.unmet, { n: s.value, total: s.total ?? 0 });
+    default:
+      return fmt(met ? t[o.kind].met : t[o.kind].unmet, { n: s.value });
+  }
+}
+
+/** Meilleur essai : le plus d'étoiles, le plus récent en cas d'égalité. */
+const bestOf = (attempts: Attempt[]) => attempts.reduce((best, a) => (a.score.stars >= best.score.stars ? a : best));
+
 export function LessonFlow() {
   const { day: param } = useParams();
   const day = Number(param);
@@ -76,11 +104,12 @@ export function LessonFlow() {
   const [picked, setPicked] = useState<number | null>(null);
   const [demoLine, setDemoLine] = useState(-1);
   const [demoPlayed, setDemoPlayed] = useState(false);
-  const [breathed, setBreathed] = useState(!plan.breathing);
+  const [breathed, setBreathed] = useState(false);
   const [recording, setRecording] = useState(false);
   const [problem, setProblem] = useState<CaptureError | 'short' | null>(null);
   const [topic, setTopic] = useState(() => d.analysis.topics[Math.floor(Math.random() * d.analysis.topics.length)]);
-  const [result, setResult] = useState<{ score: LessonScore; metrics: Metrics; xp: number } | null>(null);
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [xp, setXp] = useState(0);
   const finishing = useRef(false);
   const demoRun = useRef(0);
   const today = todayKey();
@@ -101,10 +130,12 @@ export function LessonFlow() {
       setProblem('short');
       return;
     }
-    const xp = completeLesson(day, score.stars, Math.max(1, Math.round(segment.acoustic.duration / 60)));
-    setResult({ score, metrics, xp });
-    setStep('result');
-  }, [live, lang, plan.objective, completeLesson, day]);
+    // La leçon est validée dès le premier essai : quitter ensuite ne fait rien perdre.
+    const gained = completeLesson(day, score.stars, Math.max(1, Math.round(segment.acoustic.duration / 60)));
+    setXp((x) => x + gained);
+    setAttempts((list) => [...list, { score, metrics }]);
+    setStep(attempts.length === 0 ? 'tip' : 'result');
+  }, [live, lang, plan.objective, completeLesson, day, attempts.length]);
 
   useEffect(() => {
     if (recording && live.state.elapsed >= plan.seconds) void finishExercise();
@@ -150,6 +181,15 @@ export function LessonFlow() {
   };
 
   const quiz = content.quiz[quizIndex];
+  const extraQuestions = content.quiz.length - 1;
+  const attemptNo = attempts.length + 1;
+  const first = attempts[0];
+  const best = attempts.length ? bestOf(attempts) : null;
+  const leaveDemo = () => {
+    demoRun.current++;
+    stopSpeaking();
+    setDemoLine(-1);
+  };
   const nextDay = nextLessonDay(data.progress);
   const nextState = nextDay <= 30 ? lessonState(nextDay, data, today) : null;
 
@@ -183,6 +223,59 @@ export function LessonFlow() {
             </ul>
           </Card>
           <div className="flex-1" />
+          <Button full onClick={() => setStep('demo')}>
+            {d.lesson.next}
+          </Button>
+        </div>
+      )}
+
+      {step === 'demo' && (
+        <div className="mt-5 flex flex-1 flex-col gap-4 animate-rise">
+          <p className="text-sm font-extrabold uppercase tracking-wider text-primary">{d.lesson.steps.demo}</p>
+          <h1 className="text-2xl font-semibold">{d.lesson.demoTitle}</h1>
+          <Card className="space-y-2">
+            {content.demo.map((line, i) => (
+              <p key={i} className={`rounded-xl px-2 py-1 text-lg leading-snug transition ${demoLine === i ? 'bg-primary/15 font-semibold' : ''}`}>
+                {line}
+              </p>
+            ))}
+          </Card>
+          <p className="text-sm text-muted">{content.demoNote}</p>
+          <Button variant="secondary" onClick={() => void playDemo()}>
+            {demoLine >= 0 ? <Volume2 size={18} className="animate-pulse" /> : <Play size={18} />}
+            {demoPlayed ? d.lesson.replay : d.lesson.play}
+          </Button>
+          <div className="flex-1" />
+          <Button
+            full
+            onClick={() => {
+              leaveDemo();
+              setStep('quiz');
+            }}
+          >
+            {d.lesson.next}
+          </Button>
+        </div>
+      )}
+
+      {step === 'more' && (
+        <div className="mt-5 flex flex-1 flex-col gap-4 animate-rise">
+          <p className="text-sm font-extrabold uppercase tracking-wider text-primary">{d.lesson.steps.more}</p>
+          <Card>
+            <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-muted">
+              <BookOpen size={16} /> {d.lesson.exampleLabel}
+            </p>
+            <h2 className="mt-2 font-sans text-lg font-bold">{content.example.title}</h2>
+            <p className="mt-1 leading-snug">{content.example.text}</p>
+          </Card>
+          <div className="flex items-start gap-3 rounded-2xl bg-sun/20 p-4">
+            <Lightbulb size={20} className="mt-0.5 shrink-0 text-[#9A6B12] dark:text-sun" />
+            <p className="text-sm">
+              <span className="font-bold">{d.lesson.bonusLabel} : </span>
+              {content.bonus}
+            </p>
+          </div>
+          <div className="flex-1" />
           <Button full onClick={() => setStep('quiz')}>
             {d.lesson.next}
           </Button>
@@ -192,7 +285,7 @@ export function LessonFlow() {
       {step === 'quiz' && (
         <div key={quizIndex} className="mt-5 flex flex-1 flex-col gap-4 animate-rise">
           <p className="text-sm font-extrabold uppercase tracking-wider text-primary">
-            {d.lesson.steps.quiz} · {f(d.lesson.quizProgress, { n: quizIndex + 1, total: content.quiz.length })}
+            {quizIndex === 0 ? d.lesson.steps.quiz : `${d.lesson.steps.more} · ${f(d.lesson.quizProgress, { n: quizIndex, total: extraQuestions })}`}
           </p>
           <h1 className="text-2xl font-semibold">{quiz.q}</h1>
           <div className="space-y-3" role="group" aria-label={quiz.q}>
@@ -225,61 +318,52 @@ export function LessonFlow() {
             </p>
           )}
           <div className="flex-1" />
-          <Button
-            full
-            disabled={picked === null}
-            onClick={() => {
-              setPicked(null);
-              if (quizIndex + 1 < content.quiz.length) setQuizIndex(quizIndex + 1);
-              else setStep('demo');
-            }}
-          >
-            {d.lesson.next}
-          </Button>
-        </div>
-      )}
-
-      {step === 'demo' && (
-        <div className="mt-5 flex flex-1 flex-col gap-4 animate-rise">
-          <p className="text-sm font-extrabold uppercase tracking-wider text-primary">{d.lesson.steps.demo}</p>
-          <h1 className="text-2xl font-semibold">{d.lesson.demoTitle}</h1>
-          <Card className="space-y-2">
-            {content.demo.map((line, i) => (
-              <p key={i} className={`rounded-xl px-2 py-1 text-lg leading-snug transition ${demoLine === i ? 'bg-primary/15 font-semibold' : ''}`}>
-                {line}
-              </p>
-            ))}
-          </Card>
-          <p className="text-sm text-muted">{content.demoNote}</p>
-          <Button variant="secondary" onClick={() => void playDemo()}>
-            {demoLine >= 0 ? <Volume2 size={18} className="animate-pulse" /> : <Play size={18} />}
-            {demoPlayed ? d.lesson.replay : d.lesson.play}
-          </Button>
-          <div className="flex-1" />
-          <Button
-            full
-            onClick={() => {
-              demoRun.current++;
-              stopSpeaking();
-              setDemoLine(-1);
-              setStep('practice');
-            }}
-          >
-            {d.lesson.next}
-          </Button>
+          {picked !== null && quizIndex === 0 && extraQuestions > 0 ? (
+            <div className="grid gap-3">
+              <Button variant="secondary" full onClick={() => {
+                setPicked(null);
+                setStep('more');
+                setQuizIndex(1);
+              }}>
+                <BookOpen size={18} /> {d.lesson.goDeeper}
+              </Button>
+              <p className="-mt-1 text-center text-xs font-semibold text-muted">{d.lesson.goDeeperHint}</p>
+              <Button full onClick={() => {
+                setPicked(null);
+                setStep('practice');
+              }}>
+                {d.lesson.next}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              full
+              disabled={picked === null}
+              onClick={() => {
+                setPicked(null);
+                if (quizIndex + 1 < content.quiz.length) setQuizIndex(quizIndex + 1);
+                else setStep('practice');
+              }}
+            >
+              {d.lesson.next}
+            </Button>
+          )}
         </div>
       )}
 
       {step === 'practice' && !breathed && (
         <div className="mt-8 flex flex-1 flex-col justify-center">
-          <BreathingGuide onDone={() => setBreathed(true)} />
+          <BreathingGuide cycles={plan.breathing ? 3 : 2} onDone={() => setBreathed(true)} />
+          <p className="mt-4 text-center text-sm text-muted">{d.lesson.breathingHint}</p>
         </div>
       )}
 
       {step === 'practice' && breathed && (
         <div className="mt-5 flex flex-1 flex-col gap-4 animate-rise">
-          <p className="text-sm font-extrabold uppercase tracking-wider text-primary">{d.lesson.steps.practice}</p>
-          {!recording && <h1 className="text-2xl font-semibold">{d.lesson.practiceTitle}</h1>}
+          <p className="text-sm font-extrabold uppercase tracking-wider text-primary">
+            {d.lesson.steps.practice} · {attemptNo <= GUIDED_TRIES ? f(d.lesson.attempt, { n: attemptNo, total: GUIDED_TRIES }) : f(d.lesson.attemptExtra, { n: attemptNo })}
+          </p>
+          {!recording && <h1 className="text-2xl font-semibold">{attemptNo === 1 ? d.lesson.practiceTitle : d.lesson.secondTitle}</h1>}
           {!recording && <p className="leading-snug">{content.prompt}</p>}
 
           {content.read && (
@@ -326,6 +410,15 @@ export function LessonFlow() {
               {objectiveText(d, plan.objective)}
             </p>
           </div>
+          {first && !recording && (
+            <div className="flex items-start gap-3 rounded-2xl bg-sun/20 p-4">
+              <Lightbulb size={20} className="mt-0.5 shrink-0 text-[#9A6B12] dark:text-sun" />
+              <p className="text-sm">
+                <span className="font-bold">{d.lesson.tipLabel} : </span>
+                {tipText(d, plan.objective, first.score)}
+              </p>
+            </div>
+          )}
 
           {recording ? (
             <>
@@ -364,25 +457,61 @@ export function LessonFlow() {
         </div>
       )}
 
-      {step === 'result' && result && (
+      {step === 'tip' && first && (
+        <div className="mt-6 flex flex-1 flex-col gap-5 animate-rise">
+          <div className="flex flex-col items-center text-center">
+            <p className="text-sm font-extrabold uppercase tracking-wider text-primary">{d.lesson.firstTryTitle}</p>
+            <div className="mt-3">
+              <Stars count={first.score.stars} size={36} animate />
+            </div>
+            <p className="mt-2 font-display text-xl font-semibold">{measuredText(d, plan.objective, first.score)}</p>
+          </div>
+          <CoachBubble coach={coach} message={tipText(d, plan.objective, first.score)} />
+          <p className="text-center text-sm text-muted">{d.lesson.bestOfTwo}</p>
+          <div className="flex-1" />
+          <Button
+            full
+            onClick={() => {
+              setProblem(null);
+              setStep('practice');
+            }}
+          >
+            <Mic size={20} /> {d.lesson.secondTry}
+          </Button>
+          <button type="button" onClick={() => setStep('result')} className="mx-auto text-sm font-bold text-muted underline-offset-4 hover:underline">
+            {d.lesson.stopHere}
+          </button>
+        </div>
+      )}
+
+      {step === 'result' && best && (
         <div className="mt-6 flex flex-1 flex-col gap-5 text-center animate-rise">
           <div className="flex flex-col items-center">
-            <Stars count={result.score.stars} size={44} animate />
-            <h1 className="mt-4 text-3xl font-semibold">{d.lesson.starTitles[String(result.score.stars) as '1' | '2' | '3']}</h1>
+            <Stars count={best.score.stars} size={44} animate />
+            <h1 className="mt-4 text-3xl font-semibold">{d.lesson.starTitles[String(best.score.stars) as '1' | '2' | '3']}</h1>
             <Pill className="mt-3 bg-sun/30 text-[#8A5E0C] dark:text-sun">
-              <Sparkles size={16} /> {f(d.results.xp, { n: result.xp })}
+              <Sparkles size={16} /> {f(d.results.xp, { n: xp })}
             </Pill>
           </div>
           <Card className="text-left">
             <p className="text-sm font-bold text-muted">{d.lesson.objective}</p>
             <p className="font-semibold">{objectiveText(d, plan.objective)}</p>
             <p className="mt-3 text-sm font-bold text-muted">{d.lesson.yourResult}</p>
-            <p className="font-display text-xl font-semibold">{measuredText(d, plan.objective, result.score)}</p>
+            <p className="font-display text-xl font-semibold">{measuredText(d, plan.objective, best.score)}</p>
+            {attempts.length > 1 && (
+              <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                {attempts.map((a, i) => (
+                  <li key={i} className={`flex items-center gap-1.5 ${a === best ? 'font-bold' : 'text-muted'}`}>
+                    {f(d.lesson.attemptExtra, { n: i + 1 })} <Stars count={a.score.stars} size={14} />
+                  </li>
+                ))}
+              </ul>
+            )}
             <div className="mt-4 grid grid-cols-3 gap-2 text-center">
               {[
-                { v: result.metrics.fillers, l: d.analysis.live.fillers },
-                { v: result.metrics.wpm ?? '—', l: d.analysis.live.wpm },
-                { v: result.metrics.pauses, l: d.analysis.live.pauses },
+                { v: best.metrics.fillers, l: d.analysis.live.fillers },
+                { v: best.metrics.wpm ?? '—', l: d.analysis.live.wpm },
+                { v: best.metrics.pauses, l: d.analysis.live.pauses },
               ].map((x) => (
                 <div key={x.l} className="rounded-2xl bg-soft py-2">
                   <p className="font-display text-lg font-semibold tabular-nums">{x.v}</p>
@@ -392,7 +521,7 @@ export function LessonFlow() {
             </div>
           </Card>
           <div className="text-left">
-            <CoachBubble coach={coach} message={d.lesson.starMessages[String(result.score.stars) as '1' | '2' | '3']} />
+            <CoachBubble coach={coach} message={d.lesson.starMessages[String(best.score.stars) as '1' | '2' | '3']} />
           </div>
           {nextState === 'tomorrow' && <p className="font-bold text-primary">{d.lesson.comeBack}</p>}
           <div className="flex-1" />
@@ -400,7 +529,7 @@ export function LessonFlow() {
             <Button
               variant="secondary"
               onClick={() => {
-                setResult(null);
+                setProblem(null);
                 setStep('practice');
               }}
             >
