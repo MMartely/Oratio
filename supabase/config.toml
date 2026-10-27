@@ -12,4 +12,6 @@ enable_confirmations = true
 verify_jwt = true
 
 [functions.reminders]
-verify_jwt = true
+# La clé publique des notifications est lisible par tous ; l'envoi vérifie lui-même la clé du projet
+# (les nouvelles clés « sb_publishable_… » ne sont pas des JWT).
+verify_jwt = false

@@ -5,6 +5,7 @@
 // Chaque type au plus une fois par jour et par appareil, seulement les jours choisis par l'utilisateur.
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
+import { adminKey, fromThisProject } from '../_shared/keys.ts';
 import {
   BRAVO_MINUTES,
   SENT_COLUMN,
@@ -15,7 +16,10 @@ import {
   type Subscription,
 } from '../_shared/reminders.ts';
 
-const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+const env = (name: string) => Deno.env.get(name);
+const admin = createClient(Deno.env.get('SUPABASE_URL')!, adminKey(env));
+/** Deux passages trop rapprochés : le second ne fait rien (protège la base si l'adresse est appelée en boucle). */
+const MIN_GAP_MS = 10 * 60_000;
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -45,6 +49,15 @@ async function vapidKeys() {
   );
   // Relecture : si deux appels simultanés ont généré des clés, une seule paire est gardée.
   return (await read()) ?? keys;
+}
+
+/** Réserve ce passage, sauf si le précédent date de moins de 10 minutes. */
+async function claimRun(now: Date) {
+  const { data } = await admin.from('app_secrets').select('value').eq('name', 'reminders_last_run').maybeSingle();
+  const last = data ? Date.parse(data.value) : NaN;
+  if (now.getTime() - last < MIN_GAP_MS) return false;
+  await admin.from('app_secrets').upsert({ name: 'reminders_last_run', value: now.toISOString() }, { onConflict: 'name' });
+  return true;
 }
 
 async function sendDue() {
@@ -95,7 +108,12 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
     if (req.method === 'GET') return json(200, { publicKey: (await vapidKeys()).publicKey });
-    if (req.method === 'POST') return json(200, await sendDue());
+    if (req.method === 'POST') {
+      // Appel réservé à la tâche planifiée, qui envoie une clé du projet.
+      if (!fromThisProject(req.headers, env)) return json(401, { error: 'unauthorized' });
+      if (!(await claimRun(new Date()))) return json(200, { skipped: true });
+      return json(200, await sendDue());
+    }
     return json(405, { error: 'method_not_allowed' });
   } catch (e) {
     console.error('reminders error', e);

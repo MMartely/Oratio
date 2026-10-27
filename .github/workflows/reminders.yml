@@ -20,4 +20,4 @@ jobs:
         if: env.SUPABASE_URL != '' && env.ANON_KEY != ''
         run: |
           curl --fail-with-body -sS -X POST "$SUPABASE_URL/functions/v1/reminders" \
-            -H "Authorization: Bearer $ANON_KEY" -H "Content-Type: application/json" -d '{}'
+            -H "apikey: $ANON_KEY" -H "Authorization: Bearer $ANON_KEY" -H "Content-Type: application/json" -d '{}'

@@ -12,7 +12,7 @@ Comptez environ 45 minutes la première fois. Tout est gratuit sauf l'API Claude
 |---|---|---|
 | GitHub | Héberger le code et le site | Gratuit (dépôt public) |
 | Supabase | Comptes, données, fonction du coach | Gratuit pour démarrer |
-| Anthropic (console.anthropic.com) | Clé de l'API Claude | Environ 3 centimes par analyse avec Claude Opus 5.5 |
+| Anthropic (platform.claude.com, anciennement console.anthropic.com) | Clé de l'API Claude | Environ 3 centimes par analyse avec Claude Opus 5.5 |
 | Google Cloud | Bouton « Continuer avec Google » | Gratuit |
 
 ## 1. GitHub
@@ -27,9 +27,12 @@ L'adresse de l'application sera `https://VOTRE-PSEUDO.github.io/oratio/`.
 ## 2. Supabase
 
 1. Créez un projet sur https://supabase.com (région conseillée : Europe). **Notez le mot de passe de la base de données.**
-2. Relevez trois informations dans les réglages du projet (section API) :
-   - l'**URL du projet** (`https://xxxx.supabase.co`) ; `xxxx` est la **référence du projet** ;
-   - la clé **anon / publique** (elle peut être publique : la sécurité repose sur les règles de la base).
+2. Relevez deux informations :
+   - l'**URL du projet** (`https://xxxx.supabase.co`), sur la page d'accueil du projet ou dans **Project Settings → Data API** ;
+     `xxxx` est la **référence du projet** ;
+   - la **clé publique** dans **Project Settings → API Keys** : la *Publishable key* (`sb_publishable_…`), ou l'ancienne
+     clé *anon* si votre projet en a une. Elle peut être publique : la sécurité repose sur les règles de la base.
+   - Ne copiez pas la *Secret key* (`sb_secret_…`) : le serveur la reçoit automatiquement, elle ne va nulle part ailleurs.
 3. Créez un **jeton d'accès** sur https://supabase.com/dashboard/account/tokens.
 4. **Authentication → URL Configuration** :
    - *Site URL* : `https://VOTRE-PSEUDO.github.io/oratio/`
@@ -43,11 +46,11 @@ L'adresse de l'application sera `https://VOTRE-PSEUDO.github.io/oratio/`.
 1. Sur https://console.cloud.google.com, créez un projet, puis configurez l'**écran de consentement OAuth** (type « Externe »).
 2. **Identifiants → Créer des identifiants → ID client OAuth → Application Web.**
 3. Dans *URI de redirection autorisés*, ajoutez : `https://xxxx.supabase.co/auth/v1/callback` (avec votre référence).
-4. Copiez l'**ID client** et le **code secret**, puis collez-les dans Supabase : **Authentication → Providers → Google**.
+4. Copiez l'**ID client** et le **code secret**, puis collez-les dans Supabase : **Authentication → Sign In / Providers → Google**.
 
 ## 4. Clé de l'API Claude
 
-1. Sur https://console.anthropic.com : **Settings → API Keys → Create Key**.
+1. Sur https://platform.claude.com : **Settings → API Keys → Create Key**.
 2. Ajoutez du crédit dans **Billing**, et fixez une **limite de dépense mensuelle** dans **Limits** pour garder le contrôle.
 
 ## 5. Ranger les clés dans GitHub
@@ -68,7 +71,7 @@ Onglet **Variables** :
 |---|---|
 | `SUPABASE_PROJECT_REF` | la référence du projet (`xxxx`) |
 | `VITE_SUPABASE_URL` | l'URL du projet |
-| `VITE_SUPABASE_ANON_KEY` | la clé anon / publique |
+| `VITE_SUPABASE_ANON_KEY` | la clé publique : *Publishable key* (`sb_publishable_…`) ou ancienne clé *anon* |
 | `COACH_MODEL` | facultatif : `claude-opus-5-5` par défaut |
 
 ## 6. Lancer la mise en ligne

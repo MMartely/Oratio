@@ -3,6 +3,7 @@
 // La clé de l'API Claude ne quitte jamais le serveur.
 import Anthropic from 'npm:@anthropic-ai/sdk@0.131.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
+import { adminKey } from '../_shared/keys.ts';
 import { FREE_AI_PER_DAY, normalizeReply, parsePayload, replySchemaFor, systemPrompt, userMessage } from '../_shared/coach.ts';
 import {
   MAX_INTERVIEW_CALLS,
@@ -24,7 +25,7 @@ import {
 const MODEL = Deno.env.get('COACH_MODEL') ?? 'claude-opus-5-5';
 
 const anthropic = new Anthropic();
-const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+const admin = createClient(Deno.env.get('SUPABASE_URL')!, adminKey((name) => Deno.env.get(name)));
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
