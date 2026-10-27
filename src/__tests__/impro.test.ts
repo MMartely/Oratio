@@ -34,7 +34,8 @@ describe('sujets surprises', () => {
     const first = drawTopic('fr', 'work', undefined, () => 0);
     expect(IMPRO_TOPICS.fr.work).toContain(first);
     expect(drawTopic('fr', 'work', first, () => 0)).not.toBe(first);
-    expect(IMPRO_CATEGORIES.some((c) => IMPRO_TOPICS.en[c].includes(drawTopic('en', 'all')))).toBe(true);
+    const any = drawTopic('en', 'all');
+    expect(IMPRO_CATEGORIES.some((c) => IMPRO_TOPICS.en[c].includes(any))).toBe(true);
   });
 });
 
