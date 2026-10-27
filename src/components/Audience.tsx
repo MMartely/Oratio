@@ -92,7 +92,7 @@ function rows(spec: [number, number, number][]): Seat[] {
   );
 }
 
-const LAYOUTS: Record<Exclude<ScenarioId, 'interview'>, Seat[]> = {
+const LAYOUTS: Record<Exclude<ScenarioId, 'interview' | 'impro'>, Seat[]> = {
   talk: rows([
     [6, 62, 0.68],
     [5, 112, 0.84],
@@ -114,7 +114,7 @@ const LAYOUTS: Record<Exclude<ScenarioId, 'interview'>, Seat[]> = {
  * Public virtuel qui réagit en direct : chaque spectateur a son propre seuil d'attention,
  * si bien que l'attention décroît (et revient) progressivement dans la salle.
  */
-export function Audience({ variant, attention, applause }: { variant: Exclude<ScenarioId, 'interview'>; attention: number; applause: boolean }) {
+export function Audience({ variant, attention, applause }: { variant: Exclude<ScenarioId, 'interview' | 'impro'>; attention: number; applause: boolean }) {
   const seats = LAYOUTS[variant];
   return (
     <svg viewBox="0 0 360 220" className="w-full" role="img" aria-hidden>

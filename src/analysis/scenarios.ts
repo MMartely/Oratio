@@ -22,6 +22,10 @@ const SIGNALS: Record<Lang, Record<string, string[]>> = {
     anecdote: ['je me souviens', 'la première fois', 'un jour', 'quand nous', 'quand j étais', 'il y a'],
     emotion: ['je t aime', 'merci', 'fier', 'fière', 'heureux', 'heureuse', 'émotion', 'bonheur', 'souhaite'],
     toast: ['lever mon verre', 'levons nos verres', 'santé', 'je trinque', 'à vous', 'à toi'],
+    opinion: ['je pense', 'je crois', 'à mon avis', 'selon moi', 'pour moi', 'je trouve', 'je préfère', 'oui', 'non'],
+    reason: ['parce que', 'car', 'puisque', 'la raison', 'grâce à'],
+    example: ['par exemple', 'je me souviens', 'un jour', 'prenons', 'comme quand', 'la dernière fois'],
+    wrapup: ['donc', 'voilà pourquoi', 'c est pourquoi', 'pour conclure', 'en résumé', 'bref', 'finalement', 'en conclusion'],
   },
   en: {
     intro: ['today', 'i m going to talk', 'i will present', 'good morning', 'hello', 'my name is'],
@@ -36,6 +40,10 @@ const SIGNALS: Record<Lang, Record<string, string[]>> = {
     anecdote: ['i remember', 'the first time', 'one day', 'when we', 'when i was', 'years ago'],
     emotion: ['love', 'thank', 'proud', 'happy', 'grateful', 'wish'],
     toast: ['raise a glass', 'raise your glasses', 'cheers', 'here s to', 'to you'],
+    opinion: ['i think', 'i believe', 'in my opinion', 'for me', 'i feel', 'i prefer', 'yes', 'no'],
+    reason: ['because', 'since', 'the reason', 'thanks to'],
+    example: ['for example', 'for instance', 'i remember', 'one day', 'like when', 'last time'],
+    wrapup: ['so', 'that s why', 'to conclude', 'in short', 'in the end', 'finally', 'in conclusion'],
   },
 };
 

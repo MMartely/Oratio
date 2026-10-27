@@ -6,6 +6,7 @@ import { CaptureFailure, type CaptureError } from '../../audio/capture';
 import { FileTooLong, analyzeFile } from '../../audio/fileAnalysis';
 import { useLiveRecorder } from '../../audio/useLiveRecorder';
 import { CoachBubble } from '../../components/CoachBubble';
+import { SosButton } from '../../components/SosTrac';
 import { CoachThinking, ListeningOrb, LiveStats, LiveTopBar, LiveTranscript, SignalPill } from '../../components/LiveParts';
 import { BackButton, Button, Screen } from '../../components/ui';
 import { getCoach } from '../../data/coaches';
@@ -256,6 +257,9 @@ export function AnalysisFlow() {
       </div>
 
       <div className="mt-6 space-y-2">
+        <div className="flex justify-center pb-1">
+          <SosButton />
+        </div>
         <Button full onClick={() => void start()}>
           <Mic size={20} /> {d.analysis.start}
         </Button>

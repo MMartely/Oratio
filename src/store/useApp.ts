@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { backend } from '../services/backend';
 import { safeStorage } from '../services/safeStorage';
-import { FREE_AI_PER_DAY } from '../data/features';
+import { FREE_AI_PER_DAY, FREE_IMPRO_PER_DAY } from '../data/features';
 import { nextLessonDay } from '../data/lessons/progress';
 import type { AnalysisResult, Lang, Onboarding, Plan, Profile, Progress, Theme, UserData } from '../types';
 
@@ -52,6 +52,14 @@ export function aiRemaining(data: UserData) {
   if (data.plan === 'premium') return Infinity;
   const used = data.progress.aiDay === todayKey() ? data.progress.aiCount : 0;
   return Math.max(0, FREE_AI_PER_DAY - used);
+}
+
+/** Sujets d'improvisation restants aujourd'hui (illimités en Premium). */
+export function improRemaining(data: UserData) {
+  if (data.plan === 'premium') return Infinity;
+  const today = todayKey();
+  const used = data.sessions.filter((s) => s.scenario?.id === 'impro' && todayKey(new Date(s.createdAt)) === today).length;
+  return Math.max(0, FREE_IMPRO_PER_DAY - used);
 }
 
 /** La série ne compte que si la dernière activité date d'aujourd'hui ou d'hier. */

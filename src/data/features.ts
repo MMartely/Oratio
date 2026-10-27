@@ -25,7 +25,10 @@ export const FREE_PATH_DAYS = 7;
 /** Analyses IA par jour en formule gratuite. */
 export const FREE_AI_PER_DAY = 3;
 
-/** Écran de chaque fonctionnalité ; celles pas encore construites mènent à « En construction ». */
-export const featureRoute = (id: FeatureId) => (id === 'analysis' ? '/analysis' : id === 'scenarios' ? '/practice' : `/soon/${id}`);
+/** Sujets d'improvisation par jour en formule gratuite. */
+export const FREE_IMPRO_PER_DAY = 3;
+
+/** Écran de chaque fonctionnalité. */
+export const featureRoute = (id: FeatureId) => (id === 'scenarios' ? '/practice' : `/${id}`);
 
 export type { ScenarioId };

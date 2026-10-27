@@ -7,6 +7,7 @@ import { CaptureFailure, type CaptureError } from '../../audio/capture';
 import { useLiveRecorder } from '../../audio/useLiveRecorder';
 import { Audience, attentionMood } from '../../components/Audience';
 import { CoachBubble } from '../../components/CoachBubble';
+import { SosButton } from '../../components/SosTrac';
 import { ChoiceRow, TextField } from '../../components/form';
 import { CoachThinking, LiveStats, LiveTopBar, LiveTranscript, SignalPill } from '../../components/LiveParts';
 import { BackButton, Button, Card, ProgressBar, Screen } from '../../components/ui';
@@ -363,9 +364,14 @@ export function ScenarioFlow({ id }: { id: MonologueId }) {
       </form>
 
       {!locked && (
-        <Button full type="submit" form="scenario-form" className="mt-6">
-          {d.scenario.start}
-        </Button>
+        <>
+          <div className="mt-6 flex justify-center">
+            <SosButton />
+          </div>
+          <Button full type="submit" form="scenario-form" className="mt-3">
+            {d.scenario.start}
+          </Button>
+        </>
       )}
     </Screen>
   );

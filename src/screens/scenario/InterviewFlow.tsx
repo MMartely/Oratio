@@ -11,6 +11,7 @@ import { useLiveRecorder } from '../../audio/useLiveRecorder';
 import { mergeSummaries, type AcousticSummary } from '../../audio/voiceAnalyzer';
 import { CoachAvatar } from '../../components/CoachAvatar';
 import { CoachBubble } from '../../components/CoachBubble';
+import { SosButton } from '../../components/SosTrac';
 import { ChoiceRow, TextField } from '../../components/form';
 import { CoachThinking, ListeningOrb, LiveStats, LiveTopBar, LiveTranscript, SignalPill } from '../../components/LiveParts';
 import { BackButton, Button, Screen } from '../../components/ui';
@@ -336,7 +337,10 @@ export function InterviewFlow() {
         </div>
       </form>
 
-      <Button full type="submit" form="interview-form" className="mt-6">
+      <div className="mt-6 flex justify-center">
+        <SosButton />
+      </div>
+      <Button full type="submit" form="interview-form" className="mt-3">
         {d.scenario.start}
       </Button>
     </Screen>

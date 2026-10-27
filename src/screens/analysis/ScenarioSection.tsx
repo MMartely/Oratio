@@ -10,6 +10,9 @@ const tone = {
   work: 'bg-peach/25 text-[#9A4B2E] dark:text-peach',
 } as const;
 
+const LIGHT_DOT = { none: 'bg-line', green: 'bg-[#3F8F5A]', orange: 'bg-[#E39B2D]', red: 'bg-[#C9483B]', over: 'bg-[#7E2B22]' } as const;
+const seconds = (s: number) => (s < 60 ? `${s} s` : s % 60 ? `${Math.floor(s / 60)} min ${s % 60}` : `${s / 60} min`);
+
 /** Partie du bilan propre aux situations : public, temps, incontournables, réponses d'entretien. */
 export function ScenarioSection({ result }: { result: AnalysisResult }) {
   const { d, f } = useI18n();
@@ -19,7 +22,7 @@ export function ScenarioSection({ result }: { result: AnalysisResult }) {
 
   return (
     <>
-      {(s.attention !== undefined || s.timing) && (
+      {(s.attention !== undefined || s.timing || s.lights) && (
         <div className="grid grid-cols-2 gap-3">
           {s.attention !== undefined && (
             <div className="rounded-3xl border border-line bg-surface p-4">
@@ -30,11 +33,23 @@ export function ScenarioSection({ result }: { result: AnalysisResult }) {
               </div>
             </div>
           )}
-          {s.timing && (
+          {s.timing && !s.lights && (
             <div className="rounded-3xl border border-line bg-surface p-4">
               <p className="text-sm font-bold text-muted">{d.results.timing}</p>
               <p className="mt-1 font-display text-xl font-semibold">{d.results.timingLevels[s.timing]}</p>
               <p className="mt-0.5 text-xs text-muted">{f(d.results.target, { n: Math.round(s.targetSeconds / 60) })}</p>
+            </div>
+          )}
+          {s.lights && s.lightTimes && (
+            <div className="rounded-3xl border border-line bg-surface p-4">
+              <p className="text-sm font-bold text-muted">{d.results.lights}</p>
+              <p className="mt-1 flex items-center gap-2 font-display text-xl font-semibold">
+                <span className={`size-4 shrink-0 rounded-full ${LIGHT_DOT[s.lights]}`} />
+                {d.results.lightLevels[s.lights]}
+              </p>
+              <p className="mt-0.5 text-xs text-muted">
+                {f(d.results.lightRange, { green: seconds(s.lightTimes.green), red: seconds(s.lightTimes.red) })}
+              </p>
             </div>
           )}
         </div>

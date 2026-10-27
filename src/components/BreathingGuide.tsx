@@ -8,7 +8,7 @@ const PHASES = [
 ] as const;
 
 /** Respiration guidée : inspirer 4 s, bloquer 4 s, expirer 6 s, sur plusieurs cycles. */
-export function BreathingGuide({ cycles = 3, onDone }: { cycles?: number; onDone(): void }) {
+export function BreathingGuide({ cycles = 3, onDone, haptic = false }: { cycles?: number; onDone(): void; haptic?: boolean }) {
   const { d, f } = useI18n();
   const [step, setStep] = useState(0);
   const cycle = Math.floor(step / PHASES.length);
@@ -19,9 +19,17 @@ export function BreathingGuide({ cycles = 3, onDone }: { cycles?: number; onDone
       onDone();
       return;
     }
+    // Une petite vibration à chaque changement : on peut suivre les yeux fermés.
+    if (haptic) {
+      try {
+        navigator.vibrate?.(phase.key === 'exhale' ? [40, 80, 40] : 40);
+      } catch {
+        /* vibration non disponible */
+      }
+    }
     const timer = window.setTimeout(() => setStep((s) => s + 1), phase.seconds * 1000);
     return () => window.clearTimeout(timer);
-  }, [step, cycle, cycles, phase.seconds, onDone]);
+  }, [step, cycle, cycles, phase.seconds, phase.key, onDone, haptic]);
 
   if (cycle >= cycles) return null;
   return (

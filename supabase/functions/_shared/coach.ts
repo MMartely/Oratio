@@ -3,9 +3,9 @@
 
 export type CoachId = 'lea' | 'malik' | 'sofia';
 export type Lang = 'fr' | 'en';
-export type MonologueId = 'talk' | 'pitch' | 'event';
+export type MonologueId = 'talk' | 'pitch' | 'event' | 'impro';
 
-/** Situation jouée (exposé, pitch, discours) : le contenu est jugé par rapport à elle. */
+/** Situation jouée (exposé, pitch, discours, improvisation) : le contenu est jugé par rapport à elle. */
 export interface ScenarioBrief {
   id: MonologueId;
   context: Record<string, string>;
@@ -17,6 +17,7 @@ export const CHECKLISTS: Record<MonologueId, readonly string[]> = {
   talk: ['intro', 'plan', 'examples', 'conclusion'],
   pitch: ['problem', 'solution', 'audience', 'proof', 'ask'],
   event: ['honoree', 'anecdote', 'emotion', 'toast'],
+  impro: ['opinion', 'reason', 'example', 'wrapup'],
 };
 
 const CHECKLIST_MEANING: Record<string, string> = {
@@ -33,12 +34,17 @@ const CHECKLIST_MEANING: Record<string, string> = {
   anecdote: 'tells a personal anecdote',
   emotion: 'expresses feelings, gratitude or wishes',
   toast: 'ends with a toast or a clear closing wish',
+  opinion: 'gives a clear answer or opinion on the topic early on',
+  reason: 'gives at least one reason to support it',
+  example: 'gives a concrete example or a short personal story',
+  wrapup: 'comes back to the main point to finish, instead of trailing off',
 };
 
 const SITUATION: Record<MonologueId, string> = {
   talk: 'a presentation in front of an audience',
   pitch: 'a short pitch to convince listeners',
   event: 'a speech at a personal event',
+  impro: 'an improvised answer to a surprise topic drawn at random (like Toastmasters Table Topics), with only a few seconds to prepare. Value the courage to improvise and judge relevance to the drawn topic (the subject in the context), not polish',
 };
 
 /** Ce que l'application envoie au coach après une analyse. */
@@ -139,7 +145,7 @@ export function userMessage(p: CoachPayload) {
 ${Object.entries(p.scenario.context)
   .map(([k, v]) => `- ${k}: ${v}`)
   .join('\n')}
-Target duration: ${Math.round(p.scenario.targetSeconds / 60)} min
+Target duration: ${p.scenario.targetSeconds < 120 ? `${p.scenario.targetSeconds} s` : `${Math.round(p.scenario.targetSeconds / 60)} min`}
 `
     : '';
   return `Speaker's first name: ${p.name}
@@ -269,7 +275,7 @@ export function parsePayload(raw: unknown): CoachPayload | null {
 }
 
 function parseScenario(raw: unknown): ScenarioBrief | undefined {
-  if (!isRecord(raw) || !(raw.id === 'talk' || raw.id === 'pitch' || raw.id === 'event')) return undefined;
+  if (!isRecord(raw) || !(raw.id === 'talk' || raw.id === 'pitch' || raw.id === 'event' || raw.id === 'impro')) return undefined;
   const ctx = isRecord(raw.context) ? raw.context : {};
   const context = Object.fromEntries(
     Object.entries(ctx)

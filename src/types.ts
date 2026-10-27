@@ -88,7 +88,9 @@ export interface CoachFeedback {
   rewrite: { before: string; after: string } | null;
 }
 
-export type ScenarioId = 'interview' | 'talk' | 'pitch' | 'event';
+export type ScenarioId = 'interview' | 'talk' | 'pitch' | 'event' | 'impro';
+/** Dernier feu atteint en improvisation : avant le vert, vert, orange, rouge, ou au-delà du rouge (+30 s). */
+export type ImproLight = 'none' | 'green' | 'orange' | 'red' | 'over';
 export type AudienceMode = 'audience' | 'mirror';
 
 /** Ce que l'utilisateur précise avant une situation. */
@@ -121,6 +123,9 @@ export interface ScenarioInfo {
   /** Attention moyenne du public virtuel, de 0 à 100. */
   attention?: number;
   timing?: 'short' | 'ok' | 'long';
+  /** Improvisation : dernier feu atteint et seuils utilisés (en secondes). */
+  lights?: ImproLight;
+  lightTimes?: { green: number; orange: number; red: number };
   checklist?: { key: string; done: boolean }[];
   answers?: InterviewAnswer[];
 }

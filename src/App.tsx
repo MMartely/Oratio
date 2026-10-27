@@ -5,6 +5,9 @@ import { AnalysisFlow } from './screens/analysis/AnalysisFlow';
 import { Results } from './screens/analysis/Results';
 import { ScenarioRoute } from './screens/scenario/ScenarioRoute';
 import { LessonFlow } from './screens/lesson/LessonFlow';
+import { Breathing } from './screens/practice/Breathing';
+import { ImproFlow } from './screens/practice/ImproFlow';
+import { Teleprompter } from './screens/practice/Teleprompter';
 import { AuthScreen } from './screens/auth/AuthScreen';
 import { Home } from './screens/Home';
 import { Onboarding } from './screens/onboarding/Onboarding';
@@ -13,7 +16,6 @@ import { Practice } from './screens/Practice';
 import { Premium } from './screens/Premium';
 import { Profile } from './screens/Profile';
 import { ProgressScreen } from './screens/ProgressScreen';
-import { Soon } from './screens/Soon';
 import { Welcome } from './screens/Welcome';
 import { useApp } from './store/useApp';
 
@@ -69,11 +71,13 @@ export default function App() {
         <Route path="/signup" element={<GuestOnly><AuthScreen mode="signup" /></GuestOnly>} />
         <Route path="/signin" element={<GuestOnly><AuthScreen mode="signin" /></GuestOnly>} />
         <Route path="/premium" element={<RequireAuth><Premium /></RequireAuth>} />
-        <Route path="/soon/:feature" element={<RequireAuth><Soon /></RequireAuth>} />
         <Route path="/analysis" element={<RequireAuth><AnalysisFlow /></RequireAuth>} />
         <Route path="/analysis/result/:id" element={<RequireAuth><Results /></RequireAuth>} />
         <Route path="/scenario/:id" element={<RequireAuth><ScenarioRoute /></RequireAuth>} />
         <Route path="/lesson/:day" element={<RequireAuth><LessonFlow /></RequireAuth>} />
+        <Route path="/impro" element={<RequireAuth><ImproFlow /></RequireAuth>} />
+        <Route path="/breathing" element={<RequireAuth><Breathing /></RequireAuth>} />
+        <Route path="/teleprompter" element={<RequireAuth><Teleprompter /></RequireAuth>} />
         <Route element={<RequireAuth><AppShell /></RequireAuth>}>
           <Route index element={<Home />} />
           <Route path="/path" element={<Path />} />

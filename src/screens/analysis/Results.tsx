@@ -144,6 +144,9 @@ function Replay({ result }: { result: AnalysisResult }) {
   return null;
 }
 
+/** « Recommencer » ramène au même exercice. */
+const againRoute = (r: AnalysisResult) => (r.scenario?.id === 'impro' ? '/impro' : r.scenario ? `/scenario/${r.scenario.id}` : '/analysis');
+
 export function Results() {
   const { id } = useParams();
   const { d, f, p, lang } = useI18n();
@@ -376,7 +379,7 @@ export function Results() {
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <Button variant="secondary" onClick={() => navigate('/analysis', { replace: true })}>
+        <Button variant="secondary" onClick={() => navigate(againRoute(result), { replace: true })}>
           <RotateCcw size={18} /> {d.results.again}
         </Button>
         <Button onClick={() => navigate('/', { replace: true })}>{d.results.done}</Button>
